@@ -13,14 +13,6 @@ export default function Home() {
   const [animes, setAnimes] = useState<Anime[]>([]);
   const [loading, setLoading] = useState(true);
   const [isAnimeModalOpen, setIsAnimeModalOpen] = useState(false);
-  const [user, setUser] = useState<any>(null);
-
-  useEffect(() => {
-    // Verificar sesión
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user || null);
-    });
-  }, []);
 
   const loadData = async () => {
     setLoading(true);
@@ -83,6 +75,14 @@ export default function Home() {
             >
               📅 Calendario
             </Link>
+
+            <Link
+              href="/peticiones"
+              className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-cyan-600 to-blue-500 px-4 py-2.5 text-xs font-bold text-white shadow-lg shadow-cyan-600/30 hover:shadow-blue-500/50 hover:scale-[1.03] transition-all active:scale-95"
+            >
+              🤖 Peticiones
+            </Link>
+
             <button
               onClick={() => setIsAnimeModalOpen(true)}
               className="inline-flex items-center gap-2 rounded-xl border border-zinc-700/80 bg-zinc-900/60 px-4 py-2.5 text-xs font-semibold text-zinc-300 hover:bg-zinc-800 hover:text-white hover:border-zinc-600 hover:scale-[1.03] transition-all active:scale-95"

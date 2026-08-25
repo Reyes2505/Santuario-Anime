@@ -26,41 +26,54 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ success: true, animeId: existente[0].id, yaExistia: true });
     }
 
-    // Construir slug para JK Anime
-    const slug = nombre.toLowerCase()
-      .replace(/[^a-z0-9\s]/g, '')
-      .replace(/\s+/g, '-');
+    // 1. Buscar en el directorio de JK Anime
+    const busquedaResponse = await fetch(
+      `https://jkanime.net/buscar?q=${encodeURIComponent(nombre)}`,
+      { headers: { 'User-Agent': 'Mozilla/5.0' } }
+    );
 
-    // Buscar en JK Anime
-    const jkResponse = await fetch(`https://jkanime.net/${slug}/`, {
-      headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' }
-    });
+    if (!busquedaResponse.ok) {
+      return NextResponse.json({ success: false, error: 'Error buscando en JK Anime' });
+    }
 
-    if (!jkResponse.ok) {
+    const busquedaHtml = await busquedaResponse.text();
+    const $ = cheerio.load(busquedaHtml);
+
+    // Buscar el primer resultado
+    const primerLink = $('a[href*="/"]').filter((_, el) => {
+      const href = $(el).attr('href') || '';
+      return href.match(/^https?:\/\/jkanime\.net\/[a-z0-9-]+\/$/) && !href.includes('directorio') && !href.includes('buscar');
+    }).first();
+
+    if (!primerLink.length) {
       return NextResponse.json({ success: false, error: 'No se encontró en JK Anime' });
     }
 
-    const html = await jkResponse.text();
-    const $ = cheerio.load(html);
+    const animeUrl = primerLink.attr('href') || '';
+    const animeSlug = animeUrl.replace('https://jkanime.net/', '').replace(/\/$/, '');
 
-    // Extraer título real
-    const tituloReal = $('h3').first().text().trim();
+    // 2. Obtener info completa del anime
+    const animeResponse = await fetch(animeUrl, {
+      headers: { 'User-Agent': 'Mozilla/5.0' }
+    });
+
+    if (!animeResponse.ok) {
+      return NextResponse.json({ success: false, error: 'Error obteniendo info del anime' });
+    }
+
+    const animeHtml = await animeResponse.text();
+    const $anime = cheerio.load(animeHtml);
+
+    const tituloReal = $anime('h3').first().text().trim();
     const tituloFinal = tituloReal && tituloReal !== 'Buscado recientemente:' ? tituloReal : nombre;
+    const sinopsis = $anime('p.scroll').first().text().trim();
+    const portada = $anime('.anime_pic img').attr('src') || '';
+    const csrf = $anime('meta[name="csrf-token"]').attr('content') || '';
 
-    // Extraer sinopsis
-    const sinopsis = $('p.scroll').first().text().trim();
-
-    // Extraer portada
-    const portada = $('.anime_pic img').attr('src') || '';
-
-    // Extraer CSRF token
-    const csrf = $('meta[name="csrf-token"]').attr('content') || '';
-
-    // Extraer ID numérico
-    const idMatch = html.match(/ajax\/episodes\/(\d+)\//);
+    const idMatch = animeHtml.match(/ajax\/episodes\/(\d+)\//);
     const jkId = idMatch ? parseInt(idMatch[1]) : 0;
 
-    // Crear anime en Supabase
+    // 3. Crear anime en Supabase
     const { data: animeCreado, error: errorAnime } = await supabase
       .from('animes')
       .insert({
@@ -74,7 +87,7 @@ export async function GET(request: NextRequest) {
 
     if (errorAnime) throw errorAnime;
 
-    // Crear temporada
+    // 4. Crear temporada
     const { data: temporadaCreada, error: errorTemp } = await supabase
       .from('temporadas')
       .insert({
@@ -88,7 +101,7 @@ export async function GET(request: NextRequest) {
 
     if (errorTemp) throw errorTemp;
 
-    // Obtener episodios de la API de JK Anime
+    // 5. Obtener episodios
     if (jkId > 0 && csrf) {
       const episodios: number[] = [];
       let pagina = 1;
@@ -121,10 +134,9 @@ export async function GET(request: NextRequest) {
         pagina++;
       }
 
-      // Guardar episodios
+      // Guardar episodios con URLs del reproductor
       for (const epNum of episodios) {
-        // Obtener URL del reproductor
-        const epUrl = `https://jkanime.net/${slug}/${epNum}/`;
+        const epUrl = `https://jkanime.net/${animeSlug}/${epNum}/`;
         const epResponse = await fetch(epUrl, {
           headers: { 'User-Agent': 'Mozilla/5.0' }
         });
@@ -146,11 +158,12 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    return NextResponse.json({ 
-      success: true, 
+    return NextResponse.json({
+      success: true,
       animeId: animeCreado.id,
       titulo: tituloFinal,
-      episodios: 0
+      portada: portada,
+      sinopsis: sinopsis
     });
   } catch (err: any) {
     return NextResponse.json({ success: false, error: err.message }, { status: 500 });

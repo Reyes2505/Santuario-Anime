@@ -1,6 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { supabase } from '@/lib/supabase';
+import { Anime } from '@/types/database';
 
 const DIAS_SEMANA = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
 const CACHE_KEY = 'anilist_calendario_cache';
@@ -25,16 +27,25 @@ query {
 
 export default function CalendarioPage() {
   const [animesEnEmision, setAnimesEnEmision] = useState<any[]>([]);
+  const [animesEnBD, setAnimesEnBD] = useState<Anime[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [diaSeleccionado, setDiaSeleccionado] = useState(new Date().getDay() - 1);
 
   useEffect(() => {
-    async function cargarEstrenos() {
+    async function cargarDatos() {
       setLoading(true);
       setError('');
 
-      // Verificar caché primero
+      // 1. Cargar animes de Supabase para verificar si están en nuestro catálogo
+      try {
+        const { data: animesBD } = await supabase.from('animes').select('*');
+        if (animesBD) setAnimesEnBD(animesBD);
+      } catch (err) {
+        console.error('Error cargando Supabase:', err);
+      }
+
+      // 2. Verificar caché de AniList
       const cache = localStorage.getItem(CACHE_KEY);
       if (cache) {
         const { data, timestamp } = JSON.parse(cache);
@@ -45,6 +56,7 @@ export default function CalendarioPage() {
         }
       }
 
+      // 3. Obtener de AniList
       try {
         const response = await fetch('https://graphql.anilist.co', {
           method: 'POST',
@@ -53,7 +65,6 @@ export default function CalendarioPage() {
         });
 
         if (response.status === 429) {
-          // Rate limited - usar caché vieja
           const cacheViejo = localStorage.getItem(CACHE_KEY);
           if (cacheViejo) {
             const { data } = JSON.parse(cacheViejo);
@@ -93,12 +104,22 @@ export default function CalendarioPage() {
       }
     }
 
-    cargarEstrenos();
+    cargarDatos();
   }, []);
 
   const animesDelDia = animesEnEmision
     .filter(a => a.dia === diaSeleccionado)
     .sort((a, b) => a.hora.localeCompare(b.hora));
+
+  // Verificar si un anime de AniList está en nuestro catálogo
+  const encontrarEnBD = (tituloAniList: string) => {
+    return animesEnBD.find(a => {
+      const tituloBD = a.titulo.toLowerCase();
+      const tituloAni = tituloAniList.toLowerCase();
+      return tituloBD.includes(tituloAni.split(':')[0].trim()) || 
+             tituloAni.includes(tituloBD.split(':')[0].trim());
+    });
+  };
 
   return (
     <main className="min-h-screen bg-zinc-950 pb-16">
@@ -159,24 +180,47 @@ export default function CalendarioPage() {
           </div>
         ) : animesDelDia.length > 0 ? (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
-            {animesDelDia.map((anime) => (
-              <div key={anime.id} className="group relative overflow-hidden rounded-xl border border-zinc-800/60 bg-zinc-900/40 hover:border-emerald-500/50 transition-all hover:scale-[1.03]">
-                <div className="aspect-[3/4] overflow-hidden">
-                  {anime.portada ? (
-                    <img src={anime.portada} alt={anime.titulo} className="h-full w-full object-cover" loading="lazy" />
-                  ) : (
-                    <div className="flex h-full w-full items-center justify-center bg-zinc-800 text-3xl">🎬</div>
-                  )}
-                </div>
-                <div className="absolute bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-black/90 to-transparent">
-                  <h3 className="text-xs font-bold text-white line-clamp-2">{anime.titulo}</h3>
-                  <div className="flex items-center gap-2 mt-1">
-                    <span className="text-[10px] font-bold text-emerald-400">EP {anime.episodio}</span>
-                    <span className="text-[10px] text-zinc-400">{anime.hora} hrs</span>
+            {animesDelDia.map((anime) => {
+              const enBD = encontrarEnBD(anime.titulo);
+              const href = enBD ? `/anime/${enBD.id}` : `https://anilist.co/anime/${anime.id}`;
+              const esExterno = !enBD;
+
+              return (
+                <a
+                  key={anime.id}
+                  href={href}
+                  target={esExterno ? '_blank' : undefined}
+                  rel={esExterno ? 'noopener noreferrer' : undefined}
+                  className="group relative overflow-hidden rounded-xl border border-zinc-800/60 bg-zinc-900/40 hover:border-emerald-500/50 transition-all hover:scale-[1.03]"
+                >
+                  <div className="aspect-[3/4] overflow-hidden">
+                    {anime.portada ? (
+                      <img src={anime.portada} alt={anime.titulo} className="h-full w-full object-cover" loading="lazy" />
+                    ) : (
+                      <div className="flex h-full w-full items-center justify-center bg-zinc-800 text-3xl">🎬</div>
+                    )}
                   </div>
-                </div>
-              </div>
-            ))}
+                  <div className="absolute bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-black/90 to-transparent">
+                    <h3 className="text-xs font-bold text-white line-clamp-2 group-hover:text-emerald-300 transition-colors">
+                      {anime.titulo}
+                    </h3>
+                    <div className="flex items-center gap-2 mt-1">
+                      <span className="text-[10px] font-bold text-emerald-400">
+                        EP {anime.episodio}
+                      </span>
+                      <span className="text-[10px] text-zinc-400">{anime.hora} hrs</span>
+                      {enBD ? (
+                        <span className="text-[10px] font-bold text-blue-400 bg-blue-950/60 px-1.5 py-0.5 rounded">
+                          ✓ Disponible
+                        </span>
+                      ) : (
+                        <span className="text-[10px] text-zinc-600">AniList ↗</span>
+                      )}
+                    </div>
+                  </div>
+                </a>
+              );
+            })}
           </div>
         ) : (
           <p className="text-sm text-zinc-500">No hay estrenos programados para este día.</p>

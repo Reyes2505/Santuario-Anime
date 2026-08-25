@@ -1,0 +1,33 @@
+# Dependencias
+node_modules/
+entorno/
+__pycache__/
+*.pyc
+
+# Archivos de Next.js
+.next/
+out/
+dist/
+
+# Variables de entorno
+.env.local
+.env
+.env.example
+
+# Archivos pesados (videos)
+public/videos/*.mp4
+public/videos/*.mkv
+public/videos/*.webm
+*.mp4
+*.mkv
+
+# Logs
+*.log
+.santuario-anime.pid
+
+# Sistema
+.DS_Store
+*.tsbuildinfo
+
+# Backups
+backup_*/

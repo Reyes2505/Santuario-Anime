@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import * as cheerio from 'cheerio';
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
 const SUPABASE_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
@@ -22,72 +23,135 @@ export async function GET(request: NextRequest) {
       .limit(1);
 
     if (existente && existente.length > 0) {
-      return NextResponse.json({ success: true, animeId: existente[0].id });
+      return NextResponse.json({ success: true, animeId: existente[0].id, yaExistia: true });
     }
 
-    // Buscar en JK Anime
+    // Construir slug para JK Anime
     const slug = nombre.toLowerCase()
       .replace(/[^a-z0-9\s]/g, '')
       .replace(/\s+/g, '-');
 
-    // Intentar obtener info de JK Anime
-    try {
-      const jkResponse = await fetch(`https://jkanime.net/${slug}/`, {
-        headers: { 'User-Agent': 'Mozilla/5.0' }
-      });
+    // Buscar en JK Anime
+    const jkResponse = await fetch(`https://jkanime.net/${slug}/`, {
+      headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' }
+    });
 
-      if (jkResponse.ok) {
-        // Extraer info del HTML
-        const html = await jkResponse.text();
-        const tituloMatch = html.match(/<h3>([^<]+)<\/h3>/);
-        const titulo = tituloMatch ? tituloMatch[1] : nombre;
-        
-        // Crear anime con datos reales
-        const { data: animeCreado, error } = await supabase
-          .from('animes')
-          .insert({
-            titulo: titulo,
-            sinopsis: 'Agregado mediante petición del bot',
-            portada_url: '',
-            banner_url: ''
-          })
-          .select()
-          .single();
-
-        if (error) throw error;
-
-        const { error: tempError } = await supabase
-          .from('temporadas')
-          .insert({
-            anime_id: animeCreado.id,
-            nombre: 'Temporada 1',
-            orden: 1,
-            anio_lanzamiento: 2026
-          });
-
-        if (tempError) throw tempError;
-
-        return NextResponse.json({ success: true, animeId: animeCreado.id });
-      }
-    } catch (jkErr) {
-      // Si falla JK Anime, crear con el nombre dado
+    if (!jkResponse.ok) {
+      return NextResponse.json({ success: false, error: 'No se encontró en JK Anime' });
     }
 
-    // Fallback: crear anime sin info de JK
-    const { data: animeCreado, error } = await supabase
+    const html = await jkResponse.text();
+    const $ = cheerio.load(html);
+
+    // Extraer título real
+    const tituloReal = $('h3').first().text().trim();
+    const tituloFinal = tituloReal && tituloReal !== 'Buscado recientemente:' ? tituloReal : nombre;
+
+    // Extraer sinopsis
+    const sinopsis = $('p.scroll').first().text().trim();
+
+    // Extraer portada
+    const portada = $('.anime_pic img').attr('src') || '';
+
+    // Extraer CSRF token
+    const csrf = $('meta[name="csrf-token"]').attr('content') || '';
+
+    // Extraer ID numérico
+    const idMatch = html.match(/ajax\/episodes\/(\d+)\//);
+    const jkId = idMatch ? parseInt(idMatch[1]) : 0;
+
+    // Crear anime en Supabase
+    const { data: animeCreado, error: errorAnime } = await supabase
       .from('animes')
       .insert({
-        titulo: nombre,
-        sinopsis: 'Agregado mediante petición del bot',
-        portada_url: '',
-        banner_url: ''
+        titulo: tituloFinal,
+        sinopsis: sinopsis || 'Sin descripción',
+        portada_url: portada,
+        banner_url: portada
       })
       .select()
       .single();
 
-    if (error) throw error;
+    if (errorAnime) throw errorAnime;
 
-    return NextResponse.json({ success: true, animeId: animeCreado.id });
+    // Crear temporada
+    const { data: temporadaCreada, error: errorTemp } = await supabase
+      .from('temporadas')
+      .insert({
+        anime_id: animeCreado.id,
+        nombre: 'Temporada 1',
+        orden: 1,
+        anio_lanzamiento: 2026
+      })
+      .select()
+      .single();
+
+    if (errorTemp) throw errorTemp;
+
+    // Obtener episodios de la API de JK Anime
+    if (jkId > 0 && csrf) {
+      const episodios: number[] = [];
+      let pagina = 1;
+
+      while (true) {
+        const epResponse = await fetch(
+          `https://jkanime.net/ajax/episodes/${jkId}/${pagina}`,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/x-www-form-urlencoded',
+              'User-Agent': 'Mozilla/5.0'
+            },
+            body: `_token=${encodeURIComponent(csrf)}`
+          }
+        );
+
+        if (!epResponse.ok) break;
+
+        const epData = await epResponse.json();
+        if (!epData || !epData.data || epData.data.length === 0) break;
+
+        for (const ep of epData.data) {
+          const num = ep.number || 0;
+          if (num > 0) episodios.push(num);
+        }
+
+        const total = epData.total || 0;
+        if (pagina * 16 >= total) break;
+        pagina++;
+      }
+
+      // Guardar episodios
+      for (const epNum of episodios) {
+        // Obtener URL del reproductor
+        const epUrl = `https://jkanime.net/${slug}/${epNum}/`;
+        const epResponse = await fetch(epUrl, {
+          headers: { 'User-Agent': 'Mozilla/5.0' }
+        });
+
+        if (epResponse.ok) {
+          const epHtml = await epResponse.text();
+          const urlMatch = epHtml.match(/https?:\/\/jkanime\.net\/jkplayer\/um\?e=[^\s"']+/);
+          
+          if (urlMatch) {
+            await supabase.from('episodios').insert({
+              temporada_id: temporadaCreada.id,
+              numero: epNum,
+              titulo: `Episodio ${epNum}`,
+              url_stream: urlMatch[0],
+              visto: false
+            });
+          }
+        }
+      }
+    }
+
+    return NextResponse.json({ 
+      success: true, 
+      animeId: animeCreado.id,
+      titulo: tituloFinal,
+      episodios: 0
+    });
   } catch (err: any) {
     return NextResponse.json({ success: false, error: err.message }, { status: 500 });
   }

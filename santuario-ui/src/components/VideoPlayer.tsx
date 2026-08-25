@@ -48,7 +48,7 @@ export default function VideoPlayer({ episodio }: VideoPlayerProps) {
       <div className="w-full max-w-5xl mx-auto space-y-4">
         <div className="relative aspect-video w-full overflow-hidden rounded-2xl border border-zinc-800 bg-black">
           <iframe
-            src={`${proxyUrl}?autoplay=1`}src={proxyUrl}
+            src={`${proxyUrl}?autoplay=1`}
             className="h-full w-full"
             allowFullScreen
             allow="autoplay; encrypted-media; fullscreen; picture-in-picture"

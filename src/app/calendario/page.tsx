@@ -1,19 +1,8 @@
 'use client';
 
-import { useEffect, useState, useMemo, useCallback } from 'react';
-import Link from 'next/link';
+import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { Anime } from '@/types/database';
-
-interface AnimeEmision {
-  id: number;
-  titulo: string;
-  portada: string;
-  hora: string;
-  dia: number;
-  episodio: number;
-  formato: string;
-}
 
 const DIAS_SEMANA = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
 const CACHE_KEY = 'anilist_calendario_cache';
@@ -37,16 +26,11 @@ query {
 `;
 
 export default function CalendarioPage() {
-  const [animesEnEmision, setAnimesEnEmision] = useState<AnimeEmision[]>([]);
+  const [animesEnEmision, setAnimesEnEmision] = useState<any[]>([]);
   const [animesEnBD, setAnimesEnBD] = useState<Anime[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  
-  // Ajuste seguro para obtener el día actual en formato JavaScript (0=Lunes, 6=Domingo)
-  const [diaSeleccionado, setDiaSeleccionado] = useState(() => {
-    const day = new Date().getDay();
-    return day === 0 ? 6 : day - 1;
-  });
+  const [diaSeleccionado, setDiaSeleccionado] = useState(new Date().getDay() - 1);
 
   useEffect(() => {
     async function cargarDatos() {
@@ -91,7 +75,7 @@ export default function CalendarioPage() {
         const data = await response.json();
         const animes = data.data.Page.media
           .filter((anime: any) => anime.nextAiringEpisode)
-          .map((anime: any): AnimeEmision => {
+          .map((anime: any) => {
             const fecha = new Date(anime.nextAiringEpisode.airingAt * 1000);
             return {
               id: anime.id,
@@ -120,31 +104,45 @@ export default function CalendarioPage() {
     cargarDatos();
   }, []);
 
-  const encontrarEnBD = useCallback((tituloAniList: string) => {
-    const tituloNormalizado = tituloAniList.toLowerCase().replace(/[^a-z0-9]/g, '');
+  const animesDelDia = animesEnEmision
+    .filter(a => a.dia === diaSeleccionado)
+    .sort((a, b) => a.hora.localeCompare(b.hora));
+
+  const encontrarEnBD = (tituloAniList: string) => {
+    const tituloNormalizado = tituloAniList.toLowerCase().replace(/[^a-z0-9\s]/g, '');
     
+    // 1. Coincidencia exacta
     const exacta = animesEnBD.find(a => {
-      const tituloBD = a.titulo.toLowerCase().replace(/[^a-z0-9]/g, '');
+      const tituloBD = a.titulo.toLowerCase().replace(/[^a-z0-9\s]/g, '');
       return tituloBD === tituloNormalizado;
     });
     if (exacta) return exacta;
 
-    if (tituloNormalizado.length < 15) return undefined;
-
-    const palabrasAniList = tituloAniList.toLowerCase().split(' ');
+    // 2. Coincidencia por primeras 2 palabras significativas
+    const palabrasAniList = tituloNormalizado.split(' ').filter(p => p.length > 2);
     
     return animesEnBD.find(a => {
-      const tituloBD = a.titulo.toLowerCase();
-      const comunes = palabrasAniList.filter(p => p.length > 2 && tituloBD.includes(p));
-      return comunes.length >= 3;
+      const tituloBD = a.titulo.toLowerCase().replace(/[^a-z0-9\s]/g, '');
+      
+      // Si comparten las PRIMERAS 2 palabras clave
+      const primeras2 = palabrasAniList.slice(0, 2);
+      const coinciden = primeras2.every(p => tituloBD.includes(p));
+      
+      if (coinciden) return true;
+      
+      // Para "Mushoku Tensei" - buscar "mushoku" y "tensei" juntos
+      if (palabrasAniList.includes('mushoku') && palabrasAniList.includes('tensei')) {
+        return tituloBD.includes('mushoku') && tituloBD.includes('tensei');
+      }
+      
+      // Para "Re:Zero" - buscar "re:zero" o "rezero"
+      if (tituloNormalizado.includes('re:zero') || tituloNormalizado.includes('rezero')) {
+        return tituloBD.includes('re:zero') || tituloBD.includes('rezero');
+      }
+      
+      return false;
     });
-  }, [animesEnBD]);
-
-  const animesDelDia = useMemo(() => {
-    return animesEnEmision
-      .filter(a => a.dia === diaSeleccionado)
-      .sort((a, b) => a.hora.localeCompare(b.hora));
-  }, [animesEnEmision, diaSeleccionado]);
+  };
 
   return (
     <main className="min-h-screen bg-zinc-950 pb-16">
@@ -162,6 +160,7 @@ export default function CalendarioPage() {
           </div>
         )}
 
+        {/* Selector de días */}
         <div className="flex gap-2 mb-8 overflow-x-auto pb-2">
           {DIAS_SEMANA.map((dia, i) => {
             const cantidad = animesEnEmision.filter(a => a.dia === i).length;
@@ -188,6 +187,7 @@ export default function CalendarioPage() {
           })}
         </div>
 
+        {/* Animes del día */}
         <h2 className="text-lg font-bold text-white mb-4">
           {DIAS_SEMANA[diaSeleccionado]}
           <span className="text-xs font-normal text-zinc-500 ml-2">
@@ -208,10 +208,8 @@ export default function CalendarioPage() {
               const href = enBD ? `/anime/${enBD.id}` : `https://anilist.co/anime/${anime.id}`;
               const esExterno = !enBD;
 
-              const Component = esExterno ? 'a' : Link;
-
               return (
-                <Component
+                <a
                   key={anime.id}
                   href={href}
                   target={esExterno ? '_blank' : undefined}
@@ -243,7 +241,7 @@ export default function CalendarioPage() {
                       )}
                     </div>
                   </div>
-                </Component>
+                </a>
               );
             })}
           </div>

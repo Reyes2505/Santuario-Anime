@@ -63,6 +63,13 @@ export default function Header() {
           </Link>
 
           <Link
+            href="/login"
+            className="inline-flex items-center gap-1.5 rounded-xl border px-3 py-1.5 text-xs font-semibold transition-all active:scale-95 border-amber-500/40 bg-amber-500/10 text-amber-400 hover:bg-amber-500 hover:text-white"
+          >
+            🔐 Login
+          </Link>
+
+          <Link
             href="/perfil"
             className={`inline-flex items-center gap-1.5 rounded-xl border px-3 py-1.5 text-xs font-semibold transition-all active:scale-95 ${
               isProfilePage

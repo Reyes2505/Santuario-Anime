@@ -83,14 +83,6 @@ export default function Home() {
             >
               📅 Calendario
             </Link>
-
-            <Link
-              href="/login"
-              className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-amber-600 to-orange-500 px-4 py-2.5 text-xs font-bold text-white shadow-lg shadow-amber-600/30 hover:shadow-orange-500/50 hover:scale-[1.03] transition-all active:scale-95"
-            >
-              🔐 Login
-            </Link>
-
             <button
               onClick={() => setIsAnimeModalOpen(true)}
               className="inline-flex items-center gap-2 rounded-xl border border-zinc-700/80 bg-zinc-900/60 px-4 py-2.5 text-xs font-semibold text-zinc-300 hover:bg-zinc-800 hover:text-white hover:border-zinc-600 hover:scale-[1.03] transition-all active:scale-95"

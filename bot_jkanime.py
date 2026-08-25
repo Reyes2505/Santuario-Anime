@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """
-Bot Ectosimbionte v3 - Sincronización automática
+Bot Ectosimbionte v4 - Compatible con GitHub Actions
 """
 
+import os
 import requests
 from bs4 import BeautifulSoup
 from supabase import create_client
@@ -17,8 +18,8 @@ class EctosimbionteBot:
     def __init__(self):
         self.config = self._leer_configuracion()
         self.supabase = create_client(
-            self.config.get('SUPABASE_URL', self.config.get('NEXT_PUBLIC_SUPABASE_URL', '')),
-            self.config.get('SUPABASE_ANON_KEY', self.config.get('NEXT_PUBLIC_SUPABASE_ANON_KEY', ''))
+            self.config.get('SUPABASE_URL', ''),
+            self.config.get('SUPABASE_ANON_KEY', '')
         )
         
         self.session = requests.Session()
@@ -41,11 +42,22 @@ class EctosimbionteBot:
     
     def _leer_configuracion(self) -> Dict:
         config = {}
-        with open('.env.local', 'r') as f:
-            for line in f:
-                if '=' in line and not line.startswith('#'):
-                    key, value = line.strip().split('=', 1)
-                    config[key] = value
+        
+        # Primero intentar variables de entorno (GitHub Actions)
+        config['SUPABASE_URL'] = os.environ.get('SUPABASE_URL', '')
+        config['SUPABASE_ANON_KEY'] = os.environ.get('SUPABASE_ANON_KEY', '')
+        
+        # Si no hay variables de entorno, leer de .env.local
+        if not config['SUPABASE_URL']:
+            try:
+                with open('.env.local', 'r') as f:
+                    for line in f:
+                        if '=' in line and not line.startswith('#'):
+                            key, value = line.strip().split('=', 1)
+                            config[key] = value
+            except FileNotFoundError:
+                pass
+        
         return config
     
     def _request_con_reintento(self, method: str, url: str, **kwargs) -> Optional[requests.Response]:
@@ -195,7 +207,7 @@ class EctosimbionteBot:
             print(f"  ❌ {titulo[:50]}... → {str(e)[:50]}")
     
     def ejecutar(self, max_animes: int = 10, paginas: int = 1):
-        print(f"🤖 Bot Ectosimbionte v3")
+        print(f"🤖 Bot Ectosimbionte v4")
         print(f"📅 {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
         print()
         

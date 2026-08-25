@@ -68,6 +68,22 @@ class EctosimbionteBot:
     def _cargar_cache(self) -> Dict:
         try:
             with open(self.cache_file, 'r') as f:
+                cache = json.load(f)
+                if 'animes_procesados' not in cache:
+                    cache['animes_procesados'] = {}
+                if 'popularidad' not in cache:
+                    cache['popularidad'] = {}
+                if 'ultima_ejecucion' not in cache:
+                    cache['ultima_ejecucion'] = None
+                return cache
+        except:
+            return {
+                'animes_procesados': {},
+                'popularidad': {},
+                'ultima_ejecucion': None
+            }
+        try:
+            with open(self.cache_file, 'r') as f:
                 return json.load(f)
         except:
             return {'animes_procesados': {}, 'popularidad': {}, 'ultima_ejecucion': None}

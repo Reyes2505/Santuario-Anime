@@ -4,29 +4,94 @@ import { createClient } from '@supabase/supabase-js';
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
 const SUPABASE_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
 
-// Mapa de romanización para títulos japoneses comunes
 const ROMANIZATION_MAP: Record<string, string> = {
-  '天気の子': 'tenki-no-ko',
-  '君の名は': 'kimi-no-na-wa',
-  '天気': 'tenki',
-  'の': 'no',
-  '子': 'ko',
+  '君の名は': 'kimi no na wa',
+  '天気の子': 'tenki no ko',
   '君': 'kimi',
+  'の': 'no',
   '名': 'na',
   'は': 'wa',
+  '天気': 'tenki',
+  '子': 'ko',
+  '猫': 'neko',
+  '犬': 'inu',
+  '火': 'hi',
+  '水': 'mizu',
+  '風': 'kaze',
+  '山': 'yama',
+  '川': 'kawa',
+  '海': 'umi',
+  '空': 'sora',
+  '月': 'tsuki',
+  '星': 'hoshi',
+  '花': 'hana',
+  '雪': 'yuki',
+  '雨': 'ame',
+  '雲': 'kumo',
+  '日': 'hi',
+  '本': 'hon',
+  '人': 'hito',
+  '大': 'dai',
+  '中': 'naka',
+  '小': 'shou',
+  '学': 'gaku',
+  '校': 'kou',
+  '生': 'sei',
+  '先': 'sen',
+  '何': 'nani',
+  '私': 'watashi',
+  '僕': 'boku',
+  '俺': 'ore',
+  '愛': 'ai',
+  '恋': 'koi',
+  '心': 'kokoro',
+  '夢': 'yume',
+  '希望': 'kibou',
+  '未来': 'mirai',
+  '過去': 'kako',
+  '現在': 'genzai',
+  '世界': 'sekai',
+  '異世界': 'isekai',
+  '転生': 'tensei',
+  '無職': 'mushoku',
+  '冒険': 'bouken',
+  '魔法': 'mahou',
+  '剣': 'ken',
+  '勇者': 'yuusha',
+  '魔王': 'maou',
+  '天使': 'tenshi',
+  '悪魔': 'akuma',
+  '神': 'kami',
+  '王': 'ou',
+  '姫': 'hime',
+  '王子': 'ouji',
+  '騎士': 'kishi',
+  '戦士': 'senshi',
+  '魔法使い': 'mahoutsukai',
+  '学園': 'gakuen',
+  '高校': 'koukou',
+  '中学': 'chuugaku',
+  '小学': 'shougaku',
+  '図書': 'tosho',
+  '館': 'kan',
+  '部': 'bu',
+  '活': 'katsu',
+  '動': 'dou',
+  '曜': 'you',
+  '時': 'ji',
+  '間': 'kan',
+  '分': 'fun',
+  '秒': 'byou',
 };
 
-function romanizar(texto: string): string {
+function toSlug(texto: string): string {
   let resultado = texto;
+  // Reemplazar frases completas primero
   for (const [japones, romaji] of Object.entries(ROMANIZATION_MAP)) {
     resultado = resultado.replace(new RegExp(japones, 'g'), romaji);
   }
-  return resultado;
-}
-
-function toSlug(texto: string): string {
-  const romanizado = romanizar(texto);
-  return romanizado
+  
+  return resultado
     .toLowerCase()
     .replace(/[^a-z0-9\s]/g, '')
     .replace(/\s+/g, '-');
@@ -50,7 +115,6 @@ export async function GET(request: NextRequest) {
       .limit(1);
 
     if (existente && existente.length > 0) {
-      // Verificar si tiene episodios
       const animeId = existente[0].id;
       const temps = await supabase.from('temporadas').select('id').eq('anime_id', animeId);
       let totalEps = 0;
@@ -64,9 +128,8 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Construir slug
     const slug = toSlug(nombre);
-    console.log('🔍 Buscando slug:', slug);
+    console.log('🔍 Slug generado:', slug);
 
     // Obtener página del anime
     const animeResponse = await fetch(`https://jkanime.net/${slug}/`, {
@@ -74,7 +137,10 @@ export async function GET(request: NextRequest) {
     });
 
     if (!animeResponse.ok) {
-      return NextResponse.json({ success: false, error: `No se encontró en JK Anime (${slug})` });
+      return NextResponse.json({ 
+        success: false, 
+        error: `No se encontró en JK Anime (slug: ${slug})` 
+      });
     }
 
     const html = await animeResponse.text();
@@ -86,9 +152,6 @@ export async function GET(request: NextRequest) {
     // Extraer ID numérico
     const idMatch = html.match(/ajax\/episodes\/(\d+)\//);
     const jkId = idMatch ? parseInt(idMatch[1]) : 0;
-
-    console.log('🔑 CSRF:', csrf ? 'OK' : 'NO');
-    console.log('🆔 JK ID:', jkId);
 
     // Extraer título real
     const tituloMatch = html.match(/<h3>([^<]+)<\/h3>/);
@@ -152,7 +215,7 @@ export async function GET(request: NextRequest) {
       temporadaId = tempCreada.id;
     }
 
-    // Obtener episodios de la API AJAX
+    // Obtener episodios
     const episodios: number[] = [];
     if (jkId > 0 && csrf) {
       let pagina = 1;
@@ -185,9 +248,7 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    console.log('📹 Episodios encontrados:', episodios.length);
-
-    // Guardar episodios con URLs del reproductor
+    // Guardar episodios
     let guardados = 0;
     for (const epNum of episodios) {
       const epResponse = await fetch(`https://jkanime.net/${slug}/${epNum}/`, {

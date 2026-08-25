@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 
 export default function LoginPage() {
@@ -10,7 +9,6 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [isRegistering, setIsRegistering] = useState(false);
-  const router = useRouter();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -19,19 +17,30 @@ export default function LoginPage() {
 
     try {
       if (isRegistering) {
-        const { error } = await supabase.auth.signUp({
+        const { data, error } = await supabase.auth.signUp({
           email,
           password,
         });
         if (error) throw error;
         setError('✅ Cuenta creada. Revisa tu email para confirmar.');
+        setIsLoading(false);
+        return;
       } else {
-        const { error } = await supabase.auth.signInWithPassword({
+        const { data, error } = await supabase.auth.signInWithPassword({
           email,
           password,
         });
         if (error) throw error;
-        router.push('/admin');
+
+        if (data.session) {
+          // Esperar a que la sesión se propague
+          await new Promise(resolve => setTimeout(resolve, 500));
+          
+          // Redirigir al lobby usando window.location
+          window.location.href = '/';
+        } else {
+          setError('No se pudo iniciar sesión.');
+        }
       }
     } catch (err: any) {
       setError(err.message || 'Error de autenticación');

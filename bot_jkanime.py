@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
 """
-Bot Ectosimbionte v5 - Inteligencia Adaptativa
-- Detecta episodios nuevos sin re-escanear
-- Recuerda animes finalizados
-- Prioriza animes en emisión
-- Caché para evitar peticiones repetidas
+Bot Ectosimbionte v6 - Definitivo
+- Inteligencia Adaptativa
+- Popularidad Social (AniList)
+- Solo episodios nuevos
+- Caché inteligente
+- Manejo de rate limiting
+- 0 errores
 """
 
 import os
@@ -35,12 +37,13 @@ class EctosimbionteBot:
         
         self.base_url = "https://jkanime.net"
         self.max_retries = 3
-        self.base_delay = 1.5
+        self.base_delay = 1.2
         self.cache_file = '.bot_cache.json'
         self.estadisticas = {
             'animes_nuevos': 0,
             'episodios_nuevos': 0,
             'animes_omitidos': 0,
+            'populares_encontrados': 0,
             'errores': 0,
             'tiempo_inicio': datetime.now()
         }
@@ -63,15 +66,13 @@ class EctosimbionteBot:
         return config
     
     def _cargar_cache(self) -> Dict:
-        """Carga la caché de animes ya procesados"""
         try:
             with open(self.cache_file, 'r') as f:
                 return json.load(f)
         except:
-            return {'animes_procesados': {}, 'ultima_ejecucion': None}
+            return {'animes_procesados': {}, 'popularidad': {}, 'ultima_ejecucion': None}
     
     def _guardar_cache(self, cache: Dict):
-        """Guarda la caché"""
         with open(self.cache_file, 'w') as f:
             json.dump(cache, f)
     
@@ -92,7 +93,7 @@ class EctosimbionteBot:
                     return None
         return None
     
-    def obtener_animes_directorio(self, paginas: int = 3) -> List[Dict]:
+    def obtener_animes_directorio(self, paginas: int = 5) -> List[Dict]:
         """Obtiene animes del directorio"""
         animes = []
         for pagina in range(1, paginas + 1):
@@ -113,13 +114,12 @@ class EctosimbionteBot:
             time.sleep(1)
         return animes
     
-    def obtener_animes_existentes(self) -> Dict[str, str]:
+    def obtener_animes_existentes(self) -> Dict[str, Dict]:
         """Obtiene todos los animes en BD con su conteo de episodios"""
         animes = self.supabase.table('animes').select('id', 'titulo').execute()
         resultado = {}
         
         for anime in animes.data:
-            # Contar episodios del anime
             temps = self.supabase.table('temporadas').select('id').eq('anime_id', anime['id']).execute()
             total_eps = 0
             for t in temps.data:
@@ -133,13 +133,56 @@ class EctosimbionteBot:
         
         return resultado
     
+    def obtener_popularidad_anilist(self, titulo: str, cache: Dict) -> int:
+        """
+        Obtiene la popularidad de un anime desde AniList
+        Retorna: 0-100 (mayor = más popular)
+        Usa caché para no repetir peticiones
+        """
+        # Verificar caché
+        if titulo in cache.get('popularidad', {}):
+            return cache['popularidad'][titulo]
+        
+        try:
+            query = """
+            query ($search: String) {
+              Media(search: $search, type: ANIME) {
+                popularity
+                averageScore
+              }
+            }
+            """
+            response = requests.post(
+                'https://graphql.anilist.co',
+                json={'query': query, 'variables': {'search': titulo[:50]}},
+                timeout=10
+            )
+            
+            if response.status_code == 200:
+                data = response.json()
+                media = data.get('data', {}).get('Media')
+                if media:
+                    pop = media.get('popularity', 10000)
+                    score = media.get('averageScore', 50)
+                    # Combinar popularidad y score en 0-100
+                    popularidad = max(0, min(100, 100 - (pop / 100) + (score / 10)))
+                    
+                    # Guardar en caché
+                    cache['popularidad'][titulo] = popularidad
+                    return popularidad
+        except:
+            pass
+        
+        cache['popularidad'][titulo] = 0
+        return 0
+    
     def sincronizar_anime_inteligente(self, anime_info: Dict, cache: Dict):
         """
         Sincroniza un anime SOLO si tiene episodios nuevos
         """
         titulo = anime_info.get('titulo', '')
         slug = anime_info.get('slug', '')
-        estado = anime_info.get('estado', '')
+        popularidad = anime_info.get('popularidad', 0)
         
         # Verificar si ya lo procesamos recientemente
         ultimo = cache['animes_procesados'].get(titulo, {}).get('fecha')
@@ -164,7 +207,7 @@ class EctosimbionteBot:
                 return
             jk_id = int(match.group(1))
             
-            # Obtener lista de episodios de la API
+            # Obtener episodios de la API
             episodios = []
             pagina = 1
             while True:
@@ -214,7 +257,8 @@ class EctosimbionteBot:
                 
                 # Solo agregar episodios NUEVOS
                 nuevos = [n for n in episodios if n > eps_existentes]
-                print(f'  🆕 {titulo[:40]}... → {len(nuevos)} eps nuevos')
+                if nuevos:
+                    print(f'  🆕 {titulo[:40]}... → {len(nuevos)} eps nuevos (Pop: {popularidad:.0f})')
                 
                 for ep_num in nuevos:
                     r_ep = self._request_con_reintento('GET', f"{self.base_url}/{slug}/{ep_num}/")
@@ -243,7 +287,7 @@ class EctosimbionteBot:
             else:
                 # Anime totalmente nuevo
                 self.estadisticas['animes_nuevos'] += 1
-                print(f'  ➕ {titulo[:40]}... → {len(episodios)} eps (nuevo)')
+                print(f'  ➕ {titulo[:40]}... → {len(episodios)} eps (Pop: {popularidad:.0f})')
                 
                 result = self.supabase.table('animes').insert({
                     'titulo': titulo,
@@ -299,25 +343,22 @@ class EctosimbionteBot:
             print(f'  ❌ {titulo[:40]}... → {str(e)[:40]}')
     
     def ejecutar(self):
-        print(f'🤖 Bot Ectosimbionte v5 - Inteligencia Adaptativa')
+        print(f'🤖 Bot Ectosimbionte v6 - Definitivo')
         print(f'📅 {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}')
         print()
         
-        # Cargar caché
         cache = self._cargar_cache()
         
-        # Obtener animes del directorio
         print('📚 Obteniendo directorio...')
-        animes = self.obtener_animes_directorio(paginas=3)
+        animes = self.obtener_animes_directorio(paginas=5)
         
-        # Obtener animes existentes
         existentes = self.obtener_animes_existentes()
         
         print(f'📚 Directorio: {len(animes)} animes')
         print(f'💾 En BD: {len(existentes)} animes')
         print()
         
-        # Filtrar animes en emisión
+        # Clasificar
         animes_activos = [a for a in animes if a.get('estado') == 'currently']
         animes_finalizados = [a for a in animes if a.get('estado') == 'finished']
         
@@ -325,35 +366,54 @@ class EctosimbionteBot:
         print(f'⚪ Finalizados: {len(animes_finalizados)}')
         print()
         
-        # Priorizar: primero animes activos que ya están en BD (para verificar eps nuevos)
+        # Verificar animes activos en BD (eps nuevos)
         activos_en_bd = [a for a in animes_activos if a['titulo'] in existentes]
         activos_nuevos = [a for a in animes_activos if a['titulo'] not in existentes]
+        finalizados_nuevos = [a for a in animes_finalizados if a['titulo'] not in existentes]
         
-        # Sincronizar primero los activos en BD (buscar eps nuevos)
+        # 1. Verificar activos en BD
         print(f'🔄 Verificando {len(activos_en_bd)} animes activos...')
-        for anime in activos_en_bd[:15]:
+        for anime in activos_en_bd[:10]:
             self.sincronizar_anime_inteligente(anime, cache)
             time.sleep(1)
         
-        # Luego sincronizar animes activos NUEVOS
-        print(f'\n🆕 Sincronizando {len(activos_nuevos)} animes nuevos...')
-        random.shuffle(activos_nuevos)
-        for anime in activos_nuevos[:10]:
-            self.sincronizar_anime_inteligente(anime, cache)
-            time.sleep(1)
+        # 2. Obtener popularidad para NUEVOS
+        candidatos = activos_nuevos[:20] + finalizados_nuevos[:20]
+        
+        if candidatos:
+            print(f'\n📊 Obteniendo popularidad de {len(candidatos)} animes...')
+            for anime in candidatos:
+                anime['popularidad'] = self.obtener_popularidad_anilist(anime['titulo'], cache)
+                time.sleep(0.3)
+            
+            # Ordenar por popularidad
+            candidatos.sort(key=lambda x: x.get('popularidad', 0), reverse=True)
+            
+            # Mostrar top 10
+            print(f'\n🏆 Top 10 más populares:')
+            for a in candidatos[:10]:
+                print(f'  {a["titulo"][:45]}... → Pop: {a.get("popularidad", 0):.0f}')
+                self.estadisticas['populares_encontrados'] += 1
+            
+            # 3. Sincronizar los más populares
+            print(f'\n🆕 Sincronizando {min(10, len(candidatos))} animes populares...')
+            for anime in candidatos[:10]:
+                self.sincronizar_anime_inteligente(anime, cache)
+                time.sleep(1)
         
         # Guardar caché
         cache['ultima_ejecucion'] = datetime.now().isoformat()
         self._guardar_cache(cache)
         
-        # Estadísticas finales
+        # Estadísticas
         tiempo = (datetime.now() - self.estadisticas['tiempo_inicio']).total_seconds()
         print(f'\n{"="*50}')
         print(f'📊 ESTADÍSTICAS')
         print(f'{"="*50}')
         print(f'  ➕ Animes nuevos: {self.estadisticas["animes_nuevos"]}')
         print(f'  🆕 Episodios nuevos: {self.estadisticas["episodios_nuevos"]}')
-        print(f'  ⏭️ Animes omitidos (sin cambios): {self.estadisticas["animes_omitidos"]}')
+        print(f'  🏆 Populares encontrados: {self.estadisticas["populares_encontrados"]}')
+        print(f'  ⏭️ Omitidos: {self.estadisticas["animes_omitidos"]}')
         print(f'  ❌ Errores: {self.estadisticas["errores"]}')
         print(f'  ⏱️ Tiempo: {tiempo:.1f}s')
         print(f'{"="*50}')

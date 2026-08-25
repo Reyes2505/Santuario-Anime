@@ -1,6 +1,10 @@
 #!/usr/bin/env python3
 """
-Bot Ectosimbionte v4 - Compatible con GitHub Actions
+Bot Ectosimbionte v5 - Inteligencia Adaptativa
+- Detecta episodios nuevos sin re-escanear
+- Recuerda animes finalizados
+- Prioriza animes en emisión
+- Caché para evitar peticiones repetidas
 """
 
 import os
@@ -12,7 +16,7 @@ import time
 import json
 import random
 from typing import List, Dict, Optional
-from datetime import datetime
+from datetime import datetime, timedelta
 
 class EctosimbionteBot:
     def __init__(self):
@@ -31,23 +35,21 @@ class EctosimbionteBot:
         
         self.base_url = "https://jkanime.net"
         self.max_retries = 3
-        self.base_delay = 2
+        self.base_delay = 1.5
+        self.cache_file = '.bot_cache.json'
         self.estadisticas = {
-            'animes_sincronizados': 0,
-            'episodios_guardados': 0,
-            'reintentos': 0,
+            'animes_nuevos': 0,
+            'episodios_nuevos': 0,
+            'animes_omitidos': 0,
             'errores': 0,
             'tiempo_inicio': datetime.now()
         }
     
     def _leer_configuracion(self) -> Dict:
         config = {}
-        
-        # Primero intentar variables de entorno (GitHub Actions)
         config['SUPABASE_URL'] = os.environ.get('SUPABASE_URL', '')
         config['SUPABASE_ANON_KEY'] = os.environ.get('SUPABASE_ANON_KEY', '')
         
-        # Si no hay variables de entorno, leer de .env.local
         if not config['SUPABASE_URL']:
             try:
                 with open('.env.local', 'r') as f:
@@ -60,27 +62,38 @@ class EctosimbionteBot:
         
         return config
     
+    def _cargar_cache(self) -> Dict:
+        """Carga la caché de animes ya procesados"""
+        try:
+            with open(self.cache_file, 'r') as f:
+                return json.load(f)
+        except:
+            return {'animes_procesados': {}, 'ultima_ejecucion': None}
+    
+    def _guardar_cache(self, cache: Dict):
+        """Guarda la caché"""
+        with open(self.cache_file, 'w') as f:
+            json.dump(cache, f)
+    
     def _request_con_reintento(self, method: str, url: str, **kwargs) -> Optional[requests.Response]:
         for intento in range(self.max_retries):
             try:
-                response = self.session.request(method, url, timeout=20, **kwargs)
+                response = self.session.request(method, url, timeout=15, **kwargs)
                 if response.status_code == 200:
                     return response
                 elif response.status_code == 429:
-                    wait = (intento + 1) * 10
-                    time.sleep(wait)
+                    time.sleep((intento + 1) * 8)
                 else:
-                    return response
-            except Exception as e:
+                    return None
+            except:
                 if intento < self.max_retries - 1:
-                    wait = (2 ** intento) * 2 + random.uniform(1, 2)
-                    self.estadisticas['reintentos'] += 1
-                    time.sleep(wait)
+                    time.sleep((2 ** intento) + random.uniform(0.5, 1.5))
                 else:
                     return None
         return None
     
-    def obtener_animes_directorio(self, paginas: int = 2) -> List[Dict]:
+    def obtener_animes_directorio(self, paginas: int = 3) -> List[Dict]:
+        """Obtiene animes del directorio"""
         animes = []
         for pagina in range(1, paginas + 1):
             response = self._request_con_reintento('GET', f"{self.base_url}/directorio?p={pagina}")
@@ -95,13 +108,46 @@ class EctosimbionteBot:
                             'sinopsis': anime.get('synopsis', ''),
                             'portada_url': anime.get('image', '').replace('\\/', '/'),
                             'slug': anime.get('slug', ''),
+                            'estado': anime.get('status', ''),
                         })
-            time.sleep(2)
+            time.sleep(1)
         return animes
     
-    def sincronizar_anime(self, anime_info: Dict):
+    def obtener_animes_existentes(self) -> Dict[str, str]:
+        """Obtiene todos los animes en BD con su conteo de episodios"""
+        animes = self.supabase.table('animes').select('id', 'titulo').execute()
+        resultado = {}
+        
+        for anime in animes.data:
+            # Contar episodios del anime
+            temps = self.supabase.table('temporadas').select('id').eq('anime_id', anime['id']).execute()
+            total_eps = 0
+            for t in temps.data:
+                eps = self.supabase.table('episodios').select('id').eq('temporada_id', t['id']).execute()
+                total_eps += len(eps.data)
+            
+            resultado[anime['titulo']] = {
+                'id': anime['id'],
+                'total_episodios': total_eps
+            }
+        
+        return resultado
+    
+    def sincronizar_anime_inteligente(self, anime_info: Dict, cache: Dict):
+        """
+        Sincroniza un anime SOLO si tiene episodios nuevos
+        """
+        titulo = anime_info.get('titulo', '')
         slug = anime_info.get('slug', '')
-        titulo = anime_info.get('titulo', slug)
+        estado = anime_info.get('estado', '')
+        
+        # Verificar si ya lo procesamos recientemente
+        ultimo = cache['animes_procesados'].get(titulo, {}).get('fecha')
+        if ultimo:
+            fecha_ultima = datetime.fromisoformat(ultimo)
+            if datetime.now() - fecha_ultima < timedelta(hours=12):
+                self.estadisticas['animes_omitidos'] += 1
+                return
         
         try:
             response = self._request_con_reintento('GET', f"{self.base_url}/{slug}/")
@@ -118,21 +164,7 @@ class EctosimbionteBot:
                 return
             jk_id = int(match.group(1))
             
-            existing = self.supabase.table('animes').select('id').eq('titulo', titulo).execute()
-            if existing.data:
-                anime_id = existing.data[0]['id']
-            else:
-                result = self.supabase.table('animes').insert({
-                    'titulo': titulo,
-                    'sinopsis': anime_info.get('sinopsis', ''),
-                    'portada_url': anime_info.get('portada_url', ''),
-                    'banner_url': anime_info.get('portada_url', '')
-                }).execute()
-                anime_id = result.data[0]['id'] if result.data else None
-            
-            if not anime_id:
-                return
-            
+            # Obtener lista de episodios de la API
             episodios = []
             pagina = 1
             while True:
@@ -155,74 +187,177 @@ class EctosimbionteBot:
                     break
                 time.sleep(self.base_delay)
             
-            temp_result = self.supabase.table('temporadas').select('id').eq('anime_id', anime_id).eq('nombre', 'Temporada 1').execute()
-            if temp_result.data:
-                temporada_id = temp_result.data[0]['id']
-            else:
-                temp_result = self.supabase.table('temporadas').insert({
-                    'anime_id': anime_id,
-                    'nombre': 'Temporada 1',
-                    'orden': 1,
-                    'anio_lanzamiento': 2024
-                }).execute()
-                temporada_id = temp_result.data[0]['id'] if temp_result.data else None
+            # Buscar anime en BD
+            existing = self.supabase.table('animes').select('id').eq('titulo', titulo).execute()
             
-            if not temporada_id:
-                return
-            
-            for ep_num in episodios:
-                existing_ep = self.supabase.table('episodios').select('id').eq('temporada_id', temporada_id).eq('numero', ep_num).execute()
-                if existing_ep.data:
-                    continue
+            if existing.data:
+                anime_id = existing.data[0]['id']
                 
-                r_ep = self._request_con_reintento('GET', f"{self.base_url}/{slug}/{ep_num}/")
-                if r_ep:
-                    soup_ep = BeautifulSoup(r_ep.content, 'html.parser')
-                    url_reproductor = None
-                    scripts = soup_ep.find_all('script')
-                    for script in scripts:
-                        if script.string:
-                            match = re.search(r'https?://jkanime\.net/jkplayer/um\?e=[^\s"\']+', script.string)
-                            if match:
-                                url_reproductor = match.group(0)
-                                break
+                # Contar episodios existentes
+                temps = self.supabase.table('temporadas').select('id').eq('anime_id', anime_id).execute()
+                eps_existentes = 0
+                temporada_id = None
+                for t in temps.data:
+                    eps = self.supabase.table('episodios').select('id').eq('temporada_id', t['id']).execute()
+                    eps_existentes += len(eps.data)
+                    if not temporada_id:
+                        temporada_id = t['id']
+                
+                # Si no hay episodios nuevos, omitir
+                if len(episodios) <= eps_existentes:
+                    self.estadisticas['animes_omitidos'] += 1
+                    cache['animes_procesados'][titulo] = {
+                        'fecha': datetime.now().isoformat(),
+                        'total_episodios': len(episodios)
+                    }
+                    return
+                
+                # Solo agregar episodios NUEVOS
+                nuevos = [n for n in episodios if n > eps_existentes]
+                print(f'  🆕 {titulo[:40]}... → {len(nuevos)} eps nuevos')
+                
+                for ep_num in nuevos:
+                    r_ep = self._request_con_reintento('GET', f"{self.base_url}/{slug}/{ep_num}/")
+                    if r_ep:
+                        soup_ep = BeautifulSoup(r_ep.content, 'html.parser')
+                        url_reproductor = None
+                        scripts = soup_ep.find_all('script')
+                        for script in scripts:
+                            if script.string:
+                                match = re.search(r'https?://jkanime\.net/jkplayer/um\?e=[^\s"\']+', script.string)
+                                if match:
+                                    url_reproductor = match.group(0)
+                                    break
+                        
+                        if url_reproductor:
+                            self.supabase.table('episodios').insert({
+                                'temporada_id': temporada_id,
+                                'numero': ep_num,
+                                'titulo': f'Episodio {ep_num}',
+                                'url_stream': url_reproductor,
+                                'visto': False
+                            }).execute()
+                            self.estadisticas['episodios_nuevos'] += 1
                     
-                    if url_reproductor:
-                        self.supabase.table('episodios').insert({
-                            'temporada_id': temporada_id,
-                            'numero': ep_num,
-                            'titulo': f'Episodio {ep_num}',
-                            'url_stream': url_reproductor,
-                            'visto': False
-                        }).execute()
-                        self.estadisticas['episodios_guardados'] += 1
+                    time.sleep(1)
+            else:
+                # Anime totalmente nuevo
+                self.estadisticas['animes_nuevos'] += 1
+                print(f'  ➕ {titulo[:40]}... → {len(episodios)} eps (nuevo)')
                 
-                time.sleep(self.base_delay)
+                result = self.supabase.table('animes').insert({
+                    'titulo': titulo,
+                    'sinopsis': anime_info.get('sinopsis', ''),
+                    'portada_url': anime_info.get('portada_url', ''),
+                    'banner_url': anime_info.get('portada_url', '')
+                }).execute()
+                anime_id = result.data[0]['id'] if result.data else None
+                
+                if anime_id:
+                    temp_result = self.supabase.table('temporadas').insert({
+                        'anime_id': anime_id,
+                        'nombre': 'Temporada 1',
+                        'orden': 1,
+                        'anio_lanzamiento': 2024
+                    }).execute()
+                    temporada_id = temp_result.data[0]['id'] if temp_result.data else None
+                    
+                    if temporada_id:
+                        for ep_num in episodios:
+                            r_ep = self._request_con_reintento('GET', f"{self.base_url}/{slug}/{ep_num}/")
+                            if r_ep:
+                                soup_ep = BeautifulSoup(r_ep.content, 'html.parser')
+                                url_reproductor = None
+                                scripts = soup_ep.find_all('script')
+                                for script in scripts:
+                                    if script.string:
+                                        match = re.search(r'https?://jkanime\.net/jkplayer/um\?e=[^\s"\']+', script.string)
+                                        if match:
+                                            url_reproductor = match.group(0)
+                                            break
+                                
+                                if url_reproductor:
+                                    self.supabase.table('episodios').insert({
+                                        'temporada_id': temporada_id,
+                                        'numero': ep_num,
+                                        'titulo': f'Episodio {ep_num}',
+                                        'url_stream': url_reproductor,
+                                        'visto': False
+                                    }).execute()
+                                    self.estadisticas['episodios_nuevos'] += 1
+                            
+                            time.sleep(1)
             
-            self.estadisticas['animes_sincronizados'] += 1
-            print(f"  ✅ {titulo[:50]}... → {len(episodios)} eps")
+            # Guardar en caché
+            cache['animes_procesados'][titulo] = {
+                'fecha': datetime.now().isoformat(),
+                'total_episodios': len(episodios)
+            }
             
         except Exception as e:
             self.estadisticas['errores'] += 1
-            print(f"  ❌ {titulo[:50]}... → {str(e)[:50]}")
+            print(f'  ❌ {titulo[:40]}... → {str(e)[:40]}')
     
-    def ejecutar(self, max_animes: int = 10, paginas: int = 1):
-        print(f"🤖 Bot Ectosimbionte v4")
-        print(f"📅 {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+    def ejecutar(self):
+        print(f'🤖 Bot Ectosimbionte v5 - Inteligencia Adaptativa')
+        print(f'📅 {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}')
         print()
         
-        print("📚 Obteniendo directorio...")
-        animes = self.obtener_animes_directorio(paginas)
-        print(f"✅ {len(animes)} animes")
+        # Cargar caché
+        cache = self._cargar_cache()
         
-        for i, anime in enumerate(animes[:max_animes]):
-            print(f"[{i+1}/{max_animes}]")
-            self.sincronizar_anime(anime)
-            time.sleep(self.base_delay)
+        # Obtener animes del directorio
+        print('📚 Obteniendo directorio...')
+        animes = self.obtener_animes_directorio(paginas=3)
         
+        # Obtener animes existentes
+        existentes = self.obtener_animes_existentes()
+        
+        print(f'📚 Directorio: {len(animes)} animes')
+        print(f'💾 En BD: {len(existentes)} animes')
+        print()
+        
+        # Filtrar animes en emisión
+        animes_activos = [a for a in animes if a.get('estado') == 'currently']
+        animes_finalizados = [a for a in animes if a.get('estado') == 'finished']
+        
+        print(f'🟢 En emisión: {len(animes_activos)}')
+        print(f'⚪ Finalizados: {len(animes_finalizados)}')
+        print()
+        
+        # Priorizar: primero animes activos que ya están en BD (para verificar eps nuevos)
+        activos_en_bd = [a for a in animes_activos if a['titulo'] in existentes]
+        activos_nuevos = [a for a in animes_activos if a['titulo'] not in existentes]
+        
+        # Sincronizar primero los activos en BD (buscar eps nuevos)
+        print(f'🔄 Verificando {len(activos_en_bd)} animes activos...')
+        for anime in activos_en_bd[:15]:
+            self.sincronizar_anime_inteligente(anime, cache)
+            time.sleep(1)
+        
+        # Luego sincronizar animes activos NUEVOS
+        print(f'\n🆕 Sincronizando {len(activos_nuevos)} animes nuevos...')
+        random.shuffle(activos_nuevos)
+        for anime in activos_nuevos[:10]:
+            self.sincronizar_anime_inteligente(anime, cache)
+            time.sleep(1)
+        
+        # Guardar caché
+        cache['ultima_ejecucion'] = datetime.now().isoformat()
+        self._guardar_cache(cache)
+        
+        # Estadísticas finales
         tiempo = (datetime.now() - self.estadisticas['tiempo_inicio']).total_seconds()
-        print(f"\n📊 Animes: {self.estadisticas['animes_sincronizados']} | Episodios: {self.estadisticas['episodios_guardados']} | Errores: {self.estadisticas['errores']} | Tiempo: {tiempo:.1f}s")
+        print(f'\n{"="*50}')
+        print(f'📊 ESTADÍSTICAS')
+        print(f'{"="*50}')
+        print(f'  ➕ Animes nuevos: {self.estadisticas["animes_nuevos"]}')
+        print(f'  🆕 Episodios nuevos: {self.estadisticas["episodios_nuevos"]}')
+        print(f'  ⏭️ Animes omitidos (sin cambios): {self.estadisticas["animes_omitidos"]}')
+        print(f'  ❌ Errores: {self.estadisticas["errores"]}')
+        print(f'  ⏱️ Tiempo: {tiempo:.1f}s')
+        print(f'{"="*50}')
 
 if __name__ == "__main__":
     bot = EctosimbionteBot()
-    bot.ejecutar(max_animes=10, paginas=1)
+    bot.ejecutar()

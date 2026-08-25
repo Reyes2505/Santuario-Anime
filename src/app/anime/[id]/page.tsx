@@ -35,7 +35,7 @@ export default function AnimeDetailPage() {
         const { data: epsData } = await supabase.from('episodios').select('*').order('numero');
         if (epsData) setEpisodios(epsData);
 
-        // Cargar thumbnails UNA SOLA VEZ para todo el anime
+        // Cargar thumbnails UNA SOLA VEZ
         if (animeData?.titulo) {
           const cacheKey = `thumbnails_anime_${id}`;
           const cache = localStorage.getItem(cacheKey);
@@ -124,9 +124,25 @@ export default function AnimeDetailPage() {
       </section>
 
       <section className="mx-auto max-w-7xl px-4 pt-8 space-y-8">
-        {temporadas.map((temp) => {
+        {temporadas.map((temp, tempIndex) => {
           const epsDeTemp = episodios.filter((ep) => ep.temporada_id === temp.id);
           if (epsDeTemp.length === 0) return null;
+
+          // Calcular offset acumulado para mapear a numeración global de Jikan
+          let offset = 0;
+          for (let i = 0; i < tempIndex; i++) {
+            const epsAnteriores = episodios.filter((ep) => ep.temporada_id === temporadas[i].id);
+            offset += epsAnteriores.length;
+          }
+
+          // Mapear thumbnails con offset
+          const thumbnailsConOffset: Record<string, string> = {};
+          epsDeTemp.forEach((ep) => {
+            const numeroGlobal = offset + ep.numero;
+            if (thumbnails[numeroGlobal]) {
+              thumbnailsConOffset[ep.numero] = thumbnails[numeroGlobal];
+            }
+          });
 
           return (
             <div key={temp.id}>
@@ -134,8 +150,7 @@ export default function AnimeDetailPage() {
                 <h2 className="text-lg font-bold text-white">{temp.nombre}</h2>
                 <p className="text-xs text-zinc-500">{epsDeTemp.length} episodios</p>
               </div>
-              {/* Pasar thumbnails al EpisodeGrid */}
-              <EpisodeGrid episodios={epsDeTemp} thumbnails={thumbnails} />
+              <EpisodeGrid episodios={epsDeTemp} thumbnails={thumbnailsConOffset} />
             </div>
           );
         })}

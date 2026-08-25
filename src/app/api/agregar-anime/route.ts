@@ -13,80 +13,10 @@ const ROMANIZATION_MAP: Record<string, string> = {
   'は': 'wa',
   '天気': 'tenki',
   '子': 'ko',
-  '猫': 'neko',
-  '犬': 'inu',
-  '火': 'hi',
-  '水': 'mizu',
-  '風': 'kaze',
-  '山': 'yama',
-  '川': 'kawa',
-  '海': 'umi',
-  '空': 'sora',
-  '月': 'tsuki',
-  '星': 'hoshi',
-  '花': 'hana',
-  '雪': 'yuki',
-  '雨': 'ame',
-  '雲': 'kumo',
-  '日': 'hi',
-  '本': 'hon',
-  '人': 'hito',
-  '大': 'dai',
-  '中': 'naka',
-  '小': 'shou',
-  '学': 'gaku',
-  '校': 'kou',
-  '生': 'sei',
-  '先': 'sen',
-  '何': 'nani',
-  '私': 'watashi',
-  '僕': 'boku',
-  '俺': 'ore',
-  '愛': 'ai',
-  '恋': 'koi',
-  '心': 'kokoro',
-  '夢': 'yume',
-  '希望': 'kibou',
-  '未来': 'mirai',
-  '過去': 'kako',
-  '現在': 'genzai',
-  '世界': 'sekai',
-  '異世界': 'isekai',
-  '転生': 'tensei',
-  '無職': 'mushoku',
-  '冒険': 'bouken',
-  '魔法': 'mahou',
-  '剣': 'ken',
-  '勇者': 'yuusha',
-  '魔王': 'maou',
-  '天使': 'tenshi',
-  '悪魔': 'akuma',
-  '神': 'kami',
-  '王': 'ou',
-  '姫': 'hime',
-  '王子': 'ouji',
-  '騎士': 'kishi',
-  '戦士': 'senshi',
-  '魔法使い': 'mahoutsukai',
-  '学園': 'gakuen',
-  '高校': 'koukou',
-  '中学': 'chuugaku',
-  '小学': 'shougaku',
-  '図書': 'tosho',
-  '館': 'kan',
-  '部': 'bu',
-  '活': 'katsu',
-  '動': 'dou',
-  '曜': 'you',
-  '時': 'ji',
-  '間': 'kan',
-  '分': 'fun',
-  '秒': 'byou',
 };
 
 function toSlug(texto: string): string {
   let resultado = texto;
-  // Reemplazar frases completas primero
   for (const [japones, romaji] of Object.entries(ROMANIZATION_MAP)) {
     resultado = resultado.replace(new RegExp(japones, 'g'), romaji);
   }
@@ -106,32 +36,49 @@ export async function GET(request: NextRequest) {
 
   try {
     const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+    const slug = toSlug(nombre);
+    
+    console.log('🔍 Nombre:', nombre);
+    console.log('🔍 Slug:', slug);
 
-    // Verificar si ya existe
-    const { data: existente } = await supabase
+    // Buscar en BD con coincidencia flexible
+    const { data: existentes } = await supabase
       .from('animes')
-      .select('id')
-      .ilike('titulo', `%${nombre.slice(0, 30)}%`)
-      .limit(1);
+      .select('*')
+      .or(`titulo.ilike.%${slug.replace(/-/g, ' ')}%,titulo.ilike.%${nombre}%`)
+      .limit(10);
 
-    if (existente && existente.length > 0) {
-      const animeId = existente[0].id;
-      const temps = await supabase.from('temporadas').select('id').eq('anime_id', animeId);
-      let totalEps = 0;
-      for (const t of temps.data || []) {
-        const eps = await supabase.from('episodios').select('id').eq('temporada_id', t.id);
-        totalEps += (eps.data || []).length;
+    if (existentes && existentes.length > 0) {
+      // Buscar el que tenga más episodios
+      let mejorMatch = null;
+      let mejorEps = -1;
+
+      for (const anime of existentes) {
+        const temps = await supabase.from('temporadas').select('id').eq('anime_id', anime.id);
+        let totalEps = 0;
+        for (const t of temps.data || []) {
+          const eps = await supabase.from('episodios').select('id').eq('temporada_id', t.id);
+          totalEps += (eps.data || []).length;
+        }
+        
+        if (totalEps > mejorEps) {
+          mejorEps = totalEps;
+          mejorMatch = anime;
+        }
       }
 
-      if (totalEps > 0) {
-        return NextResponse.json({ success: true, animeId, yaExistia: true, totalEps });
+      if (mejorMatch && mejorEps > 0) {
+        return NextResponse.json({ 
+          success: true, 
+          animeId: mejorMatch.id, 
+          yaExistia: true, 
+          totalEps: mejorEps,
+          titulo: mejorMatch.titulo
+        });
       }
     }
 
-    const slug = toSlug(nombre);
-    console.log('🔍 Slug generado:', slug);
-
-    // Obtener página del anime
+    // Obtener página del anime de JK Anime
     const animeResponse = await fetch(`https://jkanime.net/${slug}/`, {
       headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' }
     });
@@ -166,17 +113,18 @@ export async function GET(request: NextRequest) {
     const portadaMatch = html.match(/<div class="anime_pic"[^>]*>.*?<img[^>]*src="([^"]+)"/s);
     const portada = portadaMatch ? portadaMatch[1] : '';
 
-    // Crear o actualizar anime
+    // Crear anime
     let animeId: string;
 
-    if (existente && existente.length > 0) {
-      animeId = existente[0].id;
+    if (existentes && existentes.length > 0) {
+      animeId = existentes[0].id;
       await supabase.from('animes').update({
         titulo: tituloFinal,
         sinopsis: sinopsis,
         portada_url: portada,
         banner_url: portada
       }).eq('id', animeId);
+      console.log('✅ Anime actualizado');
     } else {
       const { data: animeCreado, error } = await supabase
         .from('animes')
@@ -191,9 +139,10 @@ export async function GET(request: NextRequest) {
 
       if (error) throw error;
       animeId = animeCreado.id;
+      console.log('✅ Anime creado');
     }
 
-    // Crear o buscar temporada
+    // Crear temporada
     const temps = await supabase.from('temporadas').select('id').eq('anime_id', animeId).limit(1);
     let temporadaId: string;
 
@@ -248,9 +197,20 @@ export async function GET(request: NextRequest) {
       }
     }
 
+    console.log('📹 Episodios:', episodios.length);
+
     // Guardar episodios
     let guardados = 0;
     for (const epNum of episodios) {
+      // Verificar si ya existe
+      const existingEp = await supabase
+        .from('episodios')
+        .select('id')
+        .eq('temporada_id', temporadaId)
+        .eq('numero', epNum);
+
+      if (existingEp.data && existingEp.data.length > 0) continue;
+
       const epResponse = await fetch(`https://jkanime.net/${slug}/${epNum}/`, {
         headers: { 'User-Agent': 'Mozilla/5.0' }
       });

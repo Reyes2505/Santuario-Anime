@@ -26,49 +26,58 @@ export default function Header() {
 
   return (
     <header className="sticky top-0 z-40 w-full border-b border-zinc-800/80 bg-zinc-950/80 backdrop-blur-md">
-      <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 sm:px-6 lg:px-8">
-        <Link href="/" className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-blue-600 to-indigo-600">
-            <span className="text-lg">🏯</span>
-          </div>
-          <span className="font-black text-white text-lg">
+      <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-2 sm:px-6 lg:px-8">
+        {/* Logo */}
+        <Link href="/" className="flex items-center gap-2 transition-transform active:scale-95">
+          <img
+            src="/logo.png"
+            alt="Santuario Anime"
+            className="h-10 w-10 sm:h-12 sm:w-12 object-contain"
+          />
+          <span className="font-black text-white text-base sm:text-lg">
             Santuario <span className="text-blue-500">Anime</span>
           </span>
         </Link>
 
-        <div className="flex items-center gap-2">
+        {/* Navegación */}
+        <div className="flex items-center gap-1.5 sm:gap-2">
           <Link
             href="/admin"
-            className={`rounded-xl border px-3 py-1.5 text-xs font-semibold ${
-              isAdminPage ? 'border-blue-500 bg-blue-600 text-white' : 'border-zinc-800 bg-zinc-900 text-zinc-300'
+            className={`rounded-xl border px-2.5 sm:px-3 py-1.5 text-[10px] sm:text-xs font-semibold transition-all ${
+              isAdminPage
+                ? 'border-blue-500 bg-blue-600 text-white'
+                : 'border-zinc-800 bg-zinc-900 text-zinc-300 hover:bg-zinc-800'
             }`}
           >
-            Editor Anime
+            <span className="hidden sm:inline">🛠️ Editor</span>
+            <span className="sm:hidden">🛠️</span>
           </Link>
 
           {user ? (
             <>
               <Link
                 href="/perfil"
-                className={`rounded-xl border px-3 py-1.5 text-xs font-semibold ${
-                  isProfilePage ? 'border-blue-500 bg-blue-600 text-white' : 'border-zinc-800 bg-zinc-900 text-zinc-300'
+                className={`rounded-xl border px-2.5 sm:px-3 py-1.5 text-[10px] sm:text-xs font-semibold transition-all ${
+                  isProfilePage
+                    ? 'border-blue-500 bg-blue-600 text-white'
+                    : 'border-zinc-800 bg-zinc-900 text-zinc-300 hover:bg-zinc-800'
                 }`}
               >
-                👤 {user.email?.split('@')[0] || 'Perfil'}
+                👤 <span className="hidden sm:inline">{user.email?.split('@')[0]}</span>
               </Link>
               <button
                 onClick={handleLogout}
-                className="rounded-xl border border-red-500/40 bg-red-500/10 px-3 py-1.5 text-xs font-bold text-red-400 hover:bg-red-600 hover:text-white"
+                className="rounded-xl border border-red-500/40 bg-red-500/10 px-2.5 sm:px-3 py-1.5 text-[10px] sm:text-xs font-bold text-red-400 hover:bg-red-600 hover:text-white transition-all"
               >
-                🚪 Salir
+                🚪 <span className="hidden sm:inline">Salir</span>
               </button>
             </>
           ) : (
             <Link
               href="/login"
-              className="rounded-xl border border-amber-500/40 bg-amber-500/10 px-3 py-1.5 text-xs font-bold text-amber-400 hover:bg-amber-500 hover:text-white"
+              className="rounded-xl border border-amber-500/40 bg-amber-500/10 px-2.5 sm:px-3 py-1.5 text-[10px] sm:text-xs font-bold text-amber-400 hover:bg-amber-500 hover:text-white transition-all"
             >
-              🔐 Login
+              🔐 <span className="hidden sm:inline">Login</span>
             </Link>
           )}
         </div>

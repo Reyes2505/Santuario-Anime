@@ -3,8 +3,8 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
-import { getRolUsuario } from '@/lib/admin';
-import { getTracking } from '@/lib/tracking';
+
+const ADMIN_EMAILS = ['aaronreyesabantoj3@gmail.com', 'admin@santuario.com'];
 
 export default function PerfilPage() {
   const router = useRouter();
@@ -27,11 +27,11 @@ export default function PerfilPage() {
 
       setUser(session.user);
       
-      // Cargar rol
-      const rolUsuario = await getRolUsuario();
-      setRol(rolUsuario);
+      // Verificar si es admin por email (sin consulta a BD)
+      const esAdmin = ADMIN_EMAILS.includes(session.user.email || '');
+      setRol(esAdmin ? 'admin' : 'user');
+      console.log('👑 Es admin:', esAdmin);
 
-      // Cargar perfil de localStorage
       const saved = localStorage.getItem('santuario_profile');
       if (saved) {
         const data = JSON.parse(saved);
@@ -54,7 +54,7 @@ export default function PerfilPage() {
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
-    router.push('/');
+    window.location.href = '/';
   };
 
   if (loading) {
@@ -69,7 +69,6 @@ export default function PerfilPage() {
     <main className="min-h-screen bg-zinc-950 pb-16">
       <div className="mx-auto max-w-3xl px-4 py-8">
         <div className="rounded-2xl border border-zinc-800/60 bg-zinc-900/60 p-6">
-          {/* Avatar y nombre */}
           <div className="flex items-center gap-4 mb-6">
             <img
               src={avatar}
@@ -80,7 +79,7 @@ export default function PerfilPage() {
               <div className="flex items-center gap-2">
                 <h1 className="text-xl font-black text-white">{username}</h1>
                 {rol === 'admin' && (
-                  <span className="rounded-full bg-amber-500/20 border border-amber-500/50 px-2 py-0.5 text-[10px] font-bold text-amber-400">
+                  <span className="rounded-full bg-amber-500/20 border border-amber-500/50 px-2.5 py-1 text-[10px] font-bold text-amber-400 animate-pulse">
                     👑 Admin
                   </span>
                 )}
@@ -91,25 +90,20 @@ export default function PerfilPage() {
               onClick={handleLogout}
               className="rounded-xl bg-red-600 px-4 py-2 text-xs font-bold text-white hover:bg-red-500"
             >
-              🚪 Cerrar Sesión
+              🚪 Salir
             </button>
           </div>
 
-          {/* Bio */}
           <p className="text-sm text-zinc-400 mb-6">{bio}</p>
 
-          {/* Botón editar */}
-          {!isEditing && (
+          {!isEditing ? (
             <button
               onClick={() => setIsEditing(true)}
               className="w-full rounded-xl bg-blue-600 py-3 text-sm font-bold text-white hover:bg-blue-500"
             >
               ✏️ Editar Perfil
             </button>
-          )}
-
-          {/* Formulario de edición */}
-          {isEditing && (
+          ) : (
             <div className="space-y-4">
               <div>
                 <label className="block text-xs font-semibold text-zinc-300 mb-1">Nombre</label>

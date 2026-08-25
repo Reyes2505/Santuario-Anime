@@ -1,6 +1,6 @@
 {
-  "framework": "nextjs",
-  "buildCommand": "cd santuario-ui && npm run build",
-  "installCommand": "cd santuario-ui && npm install",
-  "outputDirectory": "santuario-ui/.next"
+  "buildCommand": "npm run build",
+  "installCommand": "npm install",
+  "outputDirectory": ".next",
+  "framework": "nextjs"
 }

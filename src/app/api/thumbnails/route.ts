@@ -2,59 +2,53 @@ import { NextRequest, NextResponse } from 'next/server';
 
 export async function GET(request: NextRequest) {
   const animeTitulo = request.nextUrl.searchParams.get('titulo');
-  const animeId = request.nextUrl.searchParams.get('id');
   
-  if (!animeTitulo && !animeId) {
-    return NextResponse.json({ error: 'Se requiere título o ID' }, { status: 400 });
+  if (!animeTitulo) {
+    return NextResponse.json({ error: 'Se requiere título' }, { status: 400 });
   }
 
   try {
-    let malId = animeId;
-
-    // Si no tenemos ID, buscar por título
-    if (!malId) {
-      const searchResponse = await fetch(
-        `https://api.jikan.moe/v4/anime?q=${encodeURIComponent(animeTitulo!)}&limit=1`
-      );
-      
-      if (!searchResponse.ok) {
-        return NextResponse.json({ error: 'Error buscando anime' }, { status: searchResponse.status });
+    // Buscar en AniList por título
+    const searchQuery = `
+      query ($search: String) {
+        Media(search: $search, type: ANIME) {
+          id
+          title {
+            romaji
+            english
+          }
+          streamingEpisodes {
+            title
+            thumbnail
+            url
+          }
+        }
       }
+    `;
 
-      const searchData = await searchResponse.json();
-      
-      if (!searchData.data || searchData.data.length === 0) {
-        return NextResponse.json({ episodes: [] });
-      }
+    const response = await fetch('https://graphql.anilist.co', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        query: searchQuery,
+        variables: { search: animeTitulo }
+      }),
+    });
 
-      malId = searchData.data[0].mal_id;
+    const data = await response.json();
+
+    if (!data.data?.Media?.streamingEpisodes) {
+      return NextResponse.json({ episodes: [] });
     }
 
-    // Esperar 1 segundo para respetar rate limit de Jikan (3 req/seg)
-    await new Promise(resolve => setTimeout(resolve, 1000));
-
-    // Obtener episodios
-    const episodesResponse = await fetch(
-      `https://api.jikan.moe/v4/anime/${malId}/episodes`
-    );
-
-    if (!episodesResponse.ok) {
-      return NextResponse.json({ error: 'Error obteniendo episodios' }, { status: episodesResponse.status });
-    }
-
-    const episodesData = await episodesResponse.json();
-
-    const episodes = episodesData.data.map((ep: any) => ({
-      numero: ep.mal_id,
-      titulo: ep.title || `Episodio ${ep.mal_id}`,
-      thumbnail: ep.images?.jpg?.image_url || null,
+    const episodes = data.data.Media.streamingEpisodes.map((ep: any, index: number) => ({
+      numero: index + 1,
+      titulo: ep.title || `Episodio ${index + 1}`,
+      thumbnail: ep.thumbnail || null,
+      url: ep.url || null,
     }));
 
-    return NextResponse.json({ 
-      episodes,
-      animeId: malId,
-      animeTitulo: searchData?.data?.[0]?.title || animeTitulo
-    });
+    return NextResponse.json({ episodes });
   } catch (error) {
     return NextResponse.json({ error: 'Error interno' }, { status: 500 });
   }

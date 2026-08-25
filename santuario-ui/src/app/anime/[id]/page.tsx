@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
 import { Anime, Episodio, Temporada } from '@/types/database';
 import EpisodeGrid from '@/components/EpisodeGrid';
+import { marcarComoViendo, marcarComoVisto, marcarPorVer, getTracking, guardarProgreso } from '@/lib/tracking';
 
 export default function AnimeDetailPage() {
   const { id } = useParams();
@@ -13,11 +14,16 @@ export default function AnimeDetailPage() {
   const [temporadas, setTemporadas] = useState<Temporada[]>([]);
   const [episodios, setEpisodios] = useState<Episodio[]>([]);
   const [loading, setLoading] = useState(true);
+  const [estadoTracking, setEstadoTracking] = useState<string>('');
 
   useEffect(() => {
     async function loadData() {
       if (!id) return;
       setLoading(true);
+
+      // Cargar estado de tracking
+      const tracking = getTracking();
+      setEstadoTracking(tracking[id as string]?.estado || '');
 
       try {
         const { data: animeData } = await supabase
@@ -48,6 +54,14 @@ export default function AnimeDetailPage() {
 
     loadData();
   }, [id]);
+
+  const handleMarcar = (estado: 'viendo' | 'visto' | 'por_ver') => {
+    if (!id) return;
+    if (estado === 'viendo') marcarComoViendo(id as string, 1);
+    if (estado === 'visto') marcarComoVisto(id as string);
+    if (estado === 'por_ver') marcarPorVer(id as string);
+    setEstadoTracking(estado);
+  };
 
   if (loading) {
     return (
@@ -110,6 +124,34 @@ export default function AnimeDetailPage() {
             {anime.sinopsis && (
               <p className="mt-3 text-sm text-zinc-400 max-w-3xl">{anime.sinopsis}</p>
             )}
+
+            {/* Botones de tracking */}
+            <div className="flex flex-wrap gap-2 mt-4">
+              <button
+                onClick={() => handleMarcar('viendo')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                  estadoTracking === 'viendo' ? 'bg-blue-600 text-white' : 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700'
+                }`}
+              >
+                👁️ Viendo
+              </button>
+              <button
+                onClick={() => handleMarcar('visto')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                  estadoTracking === 'visto' ? 'bg-green-600 text-white' : 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700'
+                }`}
+              >
+                ✅ Visto
+              </button>
+              <button
+                onClick={() => handleMarcar('por_ver')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                  estadoTracking === 'por_ver' ? 'bg-yellow-600 text-white' : 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700'
+                }`}
+              >
+                📌 Por ver
+              </button>
+            </div>
           </div>
         </div>
       </section>

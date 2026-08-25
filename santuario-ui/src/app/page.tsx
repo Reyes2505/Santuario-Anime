@@ -55,6 +55,12 @@ export default function Home() {
           </div>
           <div className="flex items-center gap-2">
             <Link
+              href="/mi-lista"
+              className="inline-flex items-center gap-1.5 rounded-xl bg-zinc-800 px-3.5 py-2 text-xs font-bold text-white hover:bg-zinc-700 transition-all active:scale-95"
+            >
+              📋 Mi Lista
+            </Link>
+            <Link
               href="/recomendaciones"
               className="inline-flex items-center gap-1.5 rounded-xl bg-purple-600 px-3.5 py-2 text-xs font-bold text-white hover:bg-purple-500 transition-all active:scale-95"
             >

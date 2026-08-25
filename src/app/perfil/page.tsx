@@ -5,6 +5,7 @@ import { UserProfile, CustomList } from '@/types/database';
 import { getUserProfile, updateUserProfile, getCustomLists } from '@/lib/offlineStore';
 import { getEstadisticasUsuario } from '@/lib/ai-recommendations';
 import { getTracking } from '@/lib/tracking';
+import { getRolUsuario } from '@/lib/admin';
 
 const AVATARS = [
   'https://api.dicebear.com/7.x/bottts/svg?seed=SantuarioOtaku',
@@ -37,6 +38,7 @@ export default function PerfilPage() {
   const [estadisticas, setEstadisticas] = useState<any>(null);
   const [tracking, setTracking] = useState<Record<string, any>>({});
   const [showAvatarPicker, setShowAvatarPicker] = useState(false);
+  const [rol, setRol] = useState<string>('user');
 
   useEffect(() => {
     const saved = getUserProfile();
@@ -50,6 +52,13 @@ export default function PerfilPage() {
     setLists(getCustomLists());
     setEstadisticas(getEstadisticasUsuario());
     setTracking(getTracking());
+
+    // Verificar rol de administrador
+    const verificarRol = async () => {
+      const rolUsuario = await getRolUsuario();
+      setRol(rolUsuario);
+    };
+    verificarRol();
   }, []);
 
   const handleSave = () => {
@@ -79,7 +88,6 @@ export default function PerfilPage() {
       </div>
 
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        {/* Perfil */}
         <div className="relative -mt-16">
           <div className="rounded-2xl border border-zinc-800/60 bg-zinc-900/60 backdrop-blur-xl p-6 shadow-2xl shadow-black/50">
             <div className="flex flex-col sm:flex-row items-start gap-6">
@@ -102,9 +110,16 @@ export default function PerfilPage() {
               <div className="flex-1">
                 <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
                   <div>
-                    <h1 className="text-2xl sm:text-3xl font-black text-white">
-                      {profile.username}
-                    </h1>
+                    <div className="flex items-center gap-2">
+                      <h1 className="text-2xl sm:text-3xl font-black text-white">
+                        {profile.username}
+                      </h1>
+                      {rol === 'admin' && (
+                        <span className="rounded-full bg-amber-500/20 border border-amber-500/50 px-2.5 py-1 text-[10px] font-bold text-amber-400 animate-pulse">
+                          👑 Admin
+                        </span>
+                      )}
+                    </div>
                     <p className="text-sm text-blue-400 font-semibold mt-1">
                       💜 {profile.favorite_genre}
                     </p>
@@ -177,7 +192,6 @@ export default function PerfilPage() {
               </div>
             </div>
 
-            {/* Selector de avatar */}
             {showAvatarPicker && (
               <div className="mt-4 pt-4 border-t border-zinc-800/50">
                 <p className="text-xs font-semibold text-zinc-400 mb-2">Elige tu avatar:</p>
@@ -226,7 +240,7 @@ export default function PerfilPage() {
           <div className="mt-6 rounded-2xl border border-zinc-800/60 bg-zinc-900/40 p-5">
             <h3 className="text-sm font-bold text-white mb-3">🎯 Tus géneros favoritos</h3>
             <div className="space-y-2">
-              {estadisticas.generosTop.map((g: any, i: number) => {
+              {estadisticas.generosTop.map((g: any) => {
                 const maxPeso = estadisticas.generosTop[0].peso || 1;
                 const porcentaje = Math.round((g.peso / maxPeso) * 100);
                 return (

@@ -1,249 +1,170 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import Link from 'next/link';
-import { Anime, Episodio } from '@/types/database';
-import {
-  getLocalAnimes,
-  getLocalEpisodes,
-  deleteLocalAnime,
-  deleteLocalEpisode,
-} from '@/lib/offlineStore';
-import AnimeEditorModal from '@/components/AnimeEditorModal';
-import EpisodeEditorModal from '@/components/EpisodeEditorModal';
+import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { supabase } from '@/lib/supabase';
+import { esAdmin } from '@/lib/admin';
 
 export default function AdminPage() {
-  const [animes, setAnimes] = useState<Anime[]>([]);
-  const [episodes, setEpisodes] = useState<Episodio[]>([]);
-
-  const [isAnimeModalOpen, setIsAnimeModalOpen] = useState(false);
-  const [selectedAnime, setSelectedAnime] = useState<Anime | null>(null);
-
-  const [isEpisodeModalOpen, setIsEpisodeModalOpen] = useState(false);
-  const [selectedEpisode, setSelectedEpisode] = useState<Episodio | null>(null);
-
-  const reloadData = () => {
-    setAnimes(getLocalAnimes());
-    setEpisodes(getLocalEpisodes());
-  };
+  const [user, setUser] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [stats, setStats] = useState({ animes: 0, temporadas: 0, episodios: 0, usuarios: 0 });
+  const [animes, setAnimes] = useState<any[]>([]);
+  const [showAnimes, setShowAnimes] = useState(false);
+  const router = useRouter();
 
   useEffect(() => {
-    reloadData();
-  }, []);
+    async function checkAuth() {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        router.push('/login');
+        return;
+      }
 
-  const handleOpenNewAnime = () => {
-    setSelectedAnime(null);
-    setIsAnimeModalOpen(true);
-  };
+      setUser(session.user);
+      
+      // Verificar si es admin
+      const adminStatus = await esAdmin();
+      setIsAdmin(adminStatus);
+      
+      if (!adminStatus) {
+        router.push('/');
+        return;
+      }
 
-  const handleEditAnime = (anime: Anime) => {
-    setSelectedAnime(anime);
-    setIsAnimeModalOpen(true);
-  };
+      // Cargar estadísticas
+      const { count: animesCount } = await supabase.from('animes').select('*', { count: 'exact' });
+      const { count: tempsCount } = await supabase.from('temporadas').select('*', { count: 'exact' });
+      const { count: epsCount } = await supabase.from('episodios').select('*', { count: 'exact' });
+      
+      setStats({
+        animes: animesCount || 0,
+        temporadas: tempsCount || 0,
+        episodios: epsCount || 0,
+        usuarios: 1,
+      });
 
-  const handleDeleteAnime = (id: string) => {
-    if (confirm('¿Estás seguro de eliminar este anime local?')) {
-      deleteLocalAnime(id);
-      reloadData();
+      // Cargar lista de animes
+      const { data: animesData } = await supabase.from('animes').select('*').order('created_at', { ascending: false });
+      if (animesData) setAnimes(animesData);
+
+      setLoading(false);
     }
+
+    checkAuth();
+  }, [router]);
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    router.push('/login');
   };
 
-  const handleOpenNewEpisode = () => {
-    setSelectedEpisode(null);
-    setIsEpisodeModalOpen(true);
-  };
-
-  const handleEditEpisode = (ep: Episodio) => {
-    setSelectedEpisode(ep);
-    setIsEpisodeModalOpen(true);
-  };
-
-  const handleDeleteEpisode = (id: string) => {
-    if (confirm('¿Estás seguro de eliminar este capítulo local?')) {
-      deleteLocalEpisode(id);
-      reloadData();
+  const handleEliminarAnime = async (animeId: string) => {
+    if (!confirm('¿Eliminar este anime y todos sus episodios?')) return;
+    
+    // Eliminar episodios
+    const temps = await supabase.from('temporadas').select('id').eq('anime_id', animeId);
+    for (const t of temps.data || []) {
+      await supabase.from('episodios').delete().eq('temporada_id', t.id);
+      await supabase.from('temporadas').delete().eq('id', t.id);
     }
+    
+    await supabase.from('animes').delete().eq('id', animeId);
+    alert('Anime eliminado');
+    window.location.reload();
   };
+
+  if (loading) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-zinc-950">
+        <div className="animate-spin h-12 w-12 border-2 border-t-blue-500 border-zinc-800 rounded-full" />
+      </main>
+    );
+  }
 
   return (
-    <main className="flex-1 bg-zinc-950 pb-16 pt-8">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 space-y-8">
-
-        {/* Top Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-zinc-800/80 pb-6">
-          <div>
-            <div className="inline-flex items-center gap-2 rounded-full border border-blue-500/30 bg-blue-500/10 px-3 py-1 text-xs font-bold text-blue-400 mb-2">
-              Panel de Administración
-            </div>
-            <h1 className="text-2xl font-black text-white sm:text-3xl">
-              Editor de Anime y Capítulos
-            </h1>
-            <p className="text-xs sm:text-sm text-zinc-400 mt-1">
-              Agrega y gestiona animes, portadas, tráilers y episodios locales (.mp4) o links online.
-            </p>
-          </div>
-
-          <div className="flex items-center gap-3">
+    <main className="min-h-screen bg-zinc-950 pb-16">
+      <div className="mx-auto max-w-7xl px-4 py-8">
+        <div className="flex items-center justify-between mb-8">
+          <h1 className="text-2xl font-black text-white">
+            🛠️ Panel de <span className="text-amber-400">Administrador</span>
+          </h1>
+          <div className="flex gap-2">
+            {isAdmin && (
+              <span className="rounded-full bg-amber-500/20 border border-amber-500/50 px-3 py-1 text-xs font-bold text-amber-400">
+                👑 Admin Verificado
+              </span>
+            )}
             <button
-              onClick={handleOpenNewAnime}
-              className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-xs font-bold text-white hover:bg-blue-500 shadow-lg shadow-blue-600/20 active:scale-95 transition-all"
+              onClick={handleLogout}
+              className="rounded-xl bg-red-600 px-4 py-2 text-xs font-bold text-white hover:bg-red-500"
             >
-              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-              </svg>
-              Agregar Anime
-            </button>
-
-            <button
-              onClick={handleOpenNewEpisode}
-              className="inline-flex items-center gap-2 rounded-xl border border-zinc-700/80 bg-zinc-900 px-4 py-2.5 text-xs font-semibold text-zinc-200 hover:bg-zinc-800 hover:text-white transition-all active:scale-95"
-            >
-              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 10.5l4.72-4.72a.75.75 0 011.28.53v11.38a.75.75 0 01-1.28.53l-4.72-4.72M4.5 18.75h9a2.25 2.25 0 002.25-2.25v-9a2.25 2.25 0 00-2.25-2.25h-9A2.25 2.25 0 002.25 7.5v9a2.25 2.25 0 002.25 2.25z" />
-              </svg>
-              Agregar Capítulo
+              Cerrar Sesión
             </button>
           </div>
         </div>
 
-        {/* Sección de Animes */}
-        <section className="space-y-4">
-          <h2 className="text-lg font-bold text-white flex items-center gap-2">
-            <span>Animes Registrados</span>
-            <span className="text-xs font-semibold text-zinc-500">
-              ({animes.length})
-            </span>
-          </h2>
+        <div className="rounded-xl border border-zinc-800/60 bg-zinc-900/40 p-4 mb-8">
+          <p className="text-sm text-zinc-400">
+            Conectado como: <span className="text-white font-bold">{user?.email}</span>
+          </p>
+        </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {/* Estadísticas */}
+        <div className="grid grid-cols-4 gap-4 mb-8">
+          <div className="rounded-xl border border-blue-500/30 bg-blue-950/30 p-4 text-center">
+            <div className="text-2xl font-black text-blue-400">{stats.animes}</div>
+            <div className="text-[10px] text-blue-300 font-semibold mt-1">ANIMES</div>
+          </div>
+          <div className="rounded-xl border border-purple-500/30 bg-purple-950/30 p-4 text-center">
+            <div className="text-2xl font-black text-purple-400">{stats.temporadas}</div>
+            <div className="text-[10px] text-purple-300 font-semibold mt-1">TEMPORADAS</div>
+          </div>
+          <div className="rounded-xl border border-green-500/30 bg-green-950/30 p-4 text-center">
+            <div className="text-2xl font-black text-green-400">{stats.episodios}</div>
+            <div className="text-[10px] text-green-300 font-semibold mt-1">EPISODIOS</div>
+          </div>
+          <div className="rounded-xl border border-amber-500/30 bg-amber-950/30 p-4 text-center">
+            <div className="text-2xl font-black text-amber-400">{stats.usuarios}</div>
+            <div className="text-[10px] text-amber-300 font-semibold mt-1">ADMINS</div>
+          </div>
+        </div>
+
+        {/* Gestión de animes */}
+        <button
+          onClick={() => setShowAnimes(!showAnimes)}
+          className="mb-4 rounded-xl bg-zinc-800 px-4 py-2 text-xs font-bold text-white hover:bg-zinc-700"
+        >
+          {showAnimes ? 'Ocultar' : 'Mostrar'} lista de animes ({animes.length})
+        </button>
+
+        {showAnimes && (
+          <div className="space-y-2">
             {animes.map((anime) => (
               <div
                 key={anime.id}
-                className="flex gap-4 p-4 rounded-2xl border border-zinc-800 bg-zinc-900/40 backdrop-blur-md"
+                className="flex items-center justify-between rounded-xl border border-zinc-800/60 bg-zinc-900/40 p-3"
               >
-                <img
-                  src={anime.portada_url}
-                  alt={anime.titulo}
-                  className="h-28 w-20 rounded-xl object-cover border border-zinc-800 flex-shrink-0"
-                />
-                <div className="flex flex-col justify-between flex-1 min-w-0">
-                  <div>
-                    <span className="inline-block text-[10px] font-bold text-blue-400 uppercase tracking-wider mb-1">
-                      {anime.trailer_type === 'online' ? 'Tráiler Online' : 'Tráiler Local'}
-                    </span>
-                    <h3 className="font-bold text-sm text-white truncate">
-                      {anime.titulo}
-                    </h3>
-                    <p className="text-xs text-zinc-400 line-clamp-2 mt-1">
-                      {anime.sinopsis}
-                    </p>
-                  </div>
-
-                  <div className="flex items-center gap-2 pt-2 border-t border-zinc-800/60">
-                    <button
-                      onClick={() => handleEditAnime(anime)}
-                      className="rounded-lg bg-zinc-800 px-2.5 py-1 text-xs font-semibold text-zinc-300 hover:bg-zinc-700 hover:text-white"
-                    >
-                      Editar
-                    </button>
-                    {anime.id !== 'mushoku-tensei-main' && (
-                      <button
-                        onClick={() => handleDeleteAnime(anime.id)}
-                        className="rounded-lg bg-red-950/40 border border-red-800/40 px-2.5 py-1 text-xs font-semibold text-red-400 hover:bg-red-900/60"
-                      >
-                        Eliminar
-                      </button>
-                    )}
-                  </div>
+                <div className="flex items-center gap-3">
+                  {anime.portada_url ? (
+                    <img src={anime.portada_url} alt={anime.titulo} className="h-10 w-8 rounded object-cover" />
+                  ) : (
+                    <div className="h-10 w-8 rounded bg-zinc-800 flex items-center justify-center">🎬</div>
+                  )}
+                  <span className="text-xs font-bold text-white">{anime.titulo}</span>
                 </div>
+                <button
+                  onClick={() => handleEliminarAnime(anime.id)}
+                  className="rounded-lg bg-red-950/50 border border-red-500/30 px-3 py-1 text-[10px] font-bold text-red-400 hover:bg-red-600 hover:text-white"
+                >
+                  🗑️ Eliminar
+                </button>
               </div>
             ))}
           </div>
-        </section>
-
-        {/* Sección de Episodios Locales */}
-        <section className="space-y-4 pt-6">
-          <div className="flex items-center justify-between">
-            <h2 className="text-lg font-bold text-white flex items-center gap-2">
-              <span>Capítulos Agregados Manualmente</span>
-              <span className="text-xs font-semibold text-zinc-500">
-                ({episodes.length})
-              </span>
-            </h2>
-          </div>
-
-          {episodes.length > 0 ? (
-            <div className="divide-y divide-zinc-800/60 rounded-2xl border border-zinc-800 bg-zinc-900/30 overflow-hidden">
-              {episodes.map((ep) => (
-                <div
-                  key={ep.id}
-                  className="flex flex-col sm:flex-row sm:items-center justify-between p-4 gap-3 hover:bg-zinc-900/60 transition-colors"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-zinc-800 font-extrabold text-xs text-blue-400 border border-zinc-700/60">
-                      EP {ep.numero}
-                    </div>
-                    <div>
-                      <h4 className="font-bold text-xs sm:text-sm text-white">
-                        {ep.titulo}
-                      </h4>
-                      <p className="text-xs text-zinc-400 font-mono truncate max-w-md">
-                        {ep.url_stream}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-2 justify-end">
-                    <span
-                      className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
-                        ep.tipo_stream === 'online'
-                          ? 'bg-purple-950/60 text-purple-300 border border-purple-800/40'
-                          : 'bg-emerald-950/60 text-emerald-300 border border-emerald-800/40'
-                      }`}
-                    >
-                      {ep.tipo_stream === 'online' ? 'Online Link' : 'Local MP4'}
-                    </span>
-
-                    <button
-                      onClick={() => handleEditEpisode(ep)}
-                      className="rounded-lg bg-zinc-800 px-2.5 py-1 text-xs font-semibold text-zinc-300 hover:bg-zinc-700 hover:text-white"
-                    >
-                      Editar
-                    </button>
-                    <button
-                      onClick={() => handleDeleteEpisode(ep.id)}
-                      className="rounded-lg bg-red-950/40 border border-red-800/40 px-2.5 py-1 text-xs font-semibold text-red-400 hover:bg-red-900/60"
-                    >
-                      Eliminar
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="rounded-2xl border border-dashed border-zinc-800 p-8 text-center text-zinc-500 text-xs">
-              Aún no has agregado ningún capítulo manual. Haz clic en "Agregar Capítulo" para añadir uno en Modo Local o Link Online.
-            </div>
-          )}
-        </section>
-
+        )}
       </div>
-
-      {/* Modales de Edición */}
-      <AnimeEditorModal
-        animeToEdit={selectedAnime}
-        isOpen={isAnimeModalOpen}
-        onClose={() => setIsAnimeModalOpen(false)}
-        onSaved={reloadData}
-      />
-
-      <EpisodeEditorModal
-        episodeToEdit={selectedEpisode}
-        defaultEpisodeNumber={episodes.length + 1}
-        isOpen={isEpisodeModalOpen}
-        onClose={() => setIsEpisodeModalOpen(false)}
-        onSaved={reloadData}
-      />
     </main>
   );
 }

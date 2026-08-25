@@ -21,9 +21,7 @@ export default function PeticionesPage() {
   const [resultados, setResultados] = useState<AnimeDetectado[]>([]);
   const [analizando, setAnalizando] = useState(false);
   const [mensaje, setMensaje] = useState('');
-  const [modoIA, setModoIA] = useState(true);
 
-  // Limpiar nombre de anime
   const limpiarNombre = (texto: string): string => {
     let nombre = texto;
     nombre = nombre.replace(/https?:\/\/[^\s]+/g, '');
@@ -39,11 +37,10 @@ export default function PeticionesPage() {
     return nombre;
   };
 
-  // Detector local (fallback)
   const detectarAnimesLocal = (texto: string): string[] => {
     const animes: string[] = [];
     
-    // Buscar URLs de JK Anime
+    // 1. Buscar URLs de JK Anime
     const urlRegex = /https?:\/\/jkanime\.net\/([a-z0-9-]+)\//g;
     let urlMatch;
     while ((urlMatch = urlRegex.exec(texto)) !== null) {
@@ -54,7 +51,14 @@ export default function PeticionesPage() {
       }
     }
     
-    // Buscar por líneas
+    // 2. Buscar patrones [Nombre](url)
+    const markdownRegex = /\[([^\]]+)\]\([^)]+\)/g;
+    let mdMatch;
+    while ((mdMatch = markdownRegex.exec(texto)) !== null) {
+      animes.push(limpiarNombre(mdMatch[1]));
+    }
+    
+    // 3. Buscar líneas con * o -
     const lineas = texto.split('\n');
     for (const linea of lineas) {
       const limpia = limpiarNombre(linea);
@@ -75,8 +79,10 @@ export default function PeticionesPage() {
         !limpia.includes('Peticiones') &&
         !limpia.includes('🤖') &&
         !limpia.includes('🔍') &&
+        !limpia.includes('📊') &&
         !limpia.startsWith('!') &&
-        !limpia.startsWith('=')
+        !limpia.startsWith('=') &&
+        !limpia.includes('El Infaltable')
       ) {
         animes.push(limpia);
       }
@@ -85,76 +91,23 @@ export default function PeticionesPage() {
     return [...new Set(animes)].filter(n => n.length > 3);
   };
 
-  // Detectar con IA (Hugging Face - gratis)
-  const detectarAnimesConIA = async (texto: string): Promise<string[]> => {
-    try {
-      const prompt = `Extract ONLY anime titles from this text. Return each title on a new line, nothing else:\n\n${texto}`;
-      
-      const response = await fetch(
-        'https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.3',
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            inputs: prompt,
-            parameters: {
-              max_new_tokens: 200,
-              temperature: 0.1,
-              return_full_text: false,
-            },
-          }),
-        }
-      );
-
-      if (response.ok) {
-        const data = await response.json();
-        const generado = data[0]?.generated_text || '';
-        
-        // Limpiar la respuesta de la IA
-        const lineas = generado
-          .split('\n')
-          .map(l => l.trim())
-          .filter(l => 
-            l.length > 3 && 
-            !l.startsWith('Extract') && 
-            !l.startsWith('Return') && 
-            !l.includes(':') &&
-            !l.startsWith('```')
-          );
-        
-        const nombres = lineas.map(l => limpiarNombre(l));
-        const resultados = [...new Set(nombres)].filter(n => n.length > 3);
-        
-        if (resultados.length > 0) return resultados;
-      }
-    } catch (err) {
-      console.error('IA falló:', err);
-    }
-    
-    // Fallback al detector local
-    return detectarAnimesLocal(texto);
-  };
-
   const analizarPeticion = async () => {
     setAnalizando(true);
     setMensaje('');
     
-    const nombres = modoIA 
-      ? await detectarAnimesConIA(texto)
-      : detectarAnimesLocal(texto);
+    const nombres = detectarAnimesLocal(texto);
     
     if (nombres.length === 0) {
-      setMensaje('⚠️ No se detectaron nombres de anime. Prueba con texto más claro.');
+      setMensaje('⚠️ No se detectaron animes. Prueba con URLs de JK Anime o nombres en líneas separadas.');
       setAnalizando(false);
       return;
     }
 
+    setMensaje(`🔍 Buscando ${nombres.length} animes...`);
+    
     const resultados: AnimeDetectado[] = [];
 
     for (const nombre of nombres) {
-      // Buscar en Supabase
       const { data } = await supabase
         .from('animes')
         .select('*')
@@ -188,10 +141,11 @@ export default function PeticionesPage() {
 
     setResultados(resultados);
     setAnalizando(false);
+    setMensaje('');
   };
 
   const agregarAnime = async (nombre: string) => {
-    setMensaje(`🔄 Buscando "${nombre}" en JK Anime...`);
+    setMensaje(`🔄 Agregando "${nombre}"...`);
     
     try {
       const response = await fetch(`/api/agregar-anime?nombre=${encodeURIComponent(nombre)}`);
@@ -201,10 +155,10 @@ export default function PeticionesPage() {
         setMensaje(`✅ "${nombre}" agregado!`);
         analizarPeticion();
       } else {
-        setMensaje(`❌ No se pudo agregar: ${data.error}`);
+        setMensaje(`❌ Error: ${data.error}`);
       }
     } catch (err) {
-      setMensaje(`❌ Error: ${err}`);
+      setMensaje(`❌ Error de conexión`);
     }
   };
 
@@ -218,33 +172,23 @@ export default function PeticionesPage() {
         const response = await fetch(`/api/agregar-anime?nombre=${encodeURIComponent(faltante.nombre)}`);
         const data = await response.json();
         if (data.success) agregados++;
-      } catch (err) {
+      } catch {
         // continuar
       }
     }
     
-    setMensaje(`✅ ${agregados}/${faltantes.length} animes agregados!`);
+    setMensaje(`✅ ${agregados}/${faltantes.length} agregados!`);
     analizarPeticion();
   };
 
   return (
     <main className="min-h-screen bg-zinc-950 pb-16">
       <div className="mx-auto max-w-5xl px-4 py-8">
-        <div className="flex items-center justify-between mb-2">
-          <h1 className="text-2xl font-black text-white">
-            🤖 Peticiones al <span className="text-blue-400">Bot</span>
-          </h1>
-          <button
-            onClick={() => setModoIA(!modoIA)}
-            className={`rounded-lg px-3 py-1.5 text-[10px] font-bold ${
-              modoIA ? 'bg-purple-600 text-white' : 'bg-zinc-800 text-zinc-400'
-            }`}
-          >
-            {modoIA ? '🧠 IA ON' : '📝 IA OFF'}
-          </button>
-        </div>
+        <h1 className="text-2xl font-black text-white mb-2">
+          🤖 Peticiones al <span className="text-blue-400">Bot</span>
+        </h1>
         <p className="text-xs text-zinc-500 mb-6">
-          Pega un artículo con nombres de anime. El bot detectará cuáles tienes y cuáles faltan.
+          Pega URLs de JK Anime, nombres en líneas separadas o artículos completos.
         </p>
 
         <div className="mb-6">
@@ -253,7 +197,7 @@ export default function PeticionesPage() {
             onChange={(e) => setTexto(e.target.value)}
             rows={8}
             className="w-full rounded-xl border border-zinc-700 bg-zinc-900 p-4 text-sm text-white focus:border-blue-500 focus:outline-none resize-none"
-            placeholder="Pega aquí tu texto o URLs de JK Anime..."
+            placeholder={'Ejemplos:\n\nkimi no na wa https://jkanime.net/kimi-no-na-wa/\n\n* Mushoku Tensei\n* Re:Zero\n* One Piece'}
           />
           <button
             onClick={analizarPeticion}

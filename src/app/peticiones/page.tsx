@@ -6,8 +6,6 @@ import Link from 'next/link';
 
 interface AnimeDetectado {
   nombre: string;
-  nombreLimpio: string;
-  slug: string;
   enBD: boolean;
   animeId?: string;
   encontrado?: {
@@ -23,107 +21,132 @@ export default function PeticionesPage() {
   const [resultados, setResultados] = useState<AnimeDetectado[]>([]);
   const [analizando, setAnalizando] = useState(false);
   const [mensaje, setMensaje] = useState('');
+  const [modoIA, setModoIA] = useState(true);
 
   // Limpiar nombre de anime
   const limpiarNombre = (texto: string): string => {
     let nombre = texto;
-    
-    // Eliminar URLs
     nombre = nombre.replace(/https?:\/\/[^\s]+/g, '');
-    
-    // Eliminar referencias [1], [2], etc.
     nombre = nombre.replace(/\[\d+\]/g, '');
-    
-    // Eliminar texto después de "—" o "-"
     nombre = nombre.split('—')[0].split('–')[0];
-    
-    // Eliminar paréntesis con temporada
     nombre = nombre.replace(/\(Temporada \d+\)/gi, '');
-    
-    // Eliminar "Temporada X" al final
     nombre = nombre.replace(/Temporada \d+$/gi, '');
     nombre = nombre.replace(/Season \d+$/gi, '');
-    
-    // Eliminar asteriscos
     nombre = nombre.replace(/\*/g, '');
-    
-    // Eliminar guiones y espacios extra
     nombre = nombre.replace(/^-\s*/, '');
+    nombre = nombre.replace(/^##+\s*/, '');
     nombre = nombre.trim();
-    
     return nombre;
   };
 
-  // Detectar animes del texto
-  const detectarAnimes = (texto: string): string[] => {
-    const lineas = texto.split('\n');
+  // Detector local (fallback)
+  const detectarAnimesLocal = (texto: string): string[] => {
     const animes: string[] = [];
     
-    for (const linea of lineas) {
-      // Buscar patrones de nombres de anime
-      // 1. [Nombre](url)
-      let match = linea.match(/\[([^\]]+)\]/);
-      // 2. * Nombre
-      if (!match) match = linea.match(/^\*\s*(.+)$/);
-      // 3. - Nombre
-      if (!match) match = linea.match(/^-\s*(.+)$/);
-      // 4. Nombre — descripción
-      if (!match) match = linea.match(/^(.+?)\s*[—–]/);
-      
-      if (match) {
-        const nombre = limpiarNombre(match[1]);
-        
-        // Filtrar falsos positivos
-        if (
-          nombre.length > 3 &&
-          !nombre.includes('http') &&
-          !nombre.includes('jkanime') &&
-          !nombre.includes('---') &&
-          !nombre.includes('A día de hoy') &&
-          !nombre.includes('El catálogo') &&
-          !nombre.includes('Continuaciones') &&
-          !nombre.includes('Nuevas') &&
-          !nombre.includes('Infaltable') &&
-          !nombre.includes('Transmisión') &&
-          !nombre.includes('¿Te interesa') &&
-          !nombre.startsWith('[')
-        ) {
-          animes.push(nombre);
-        }
+    // Buscar URLs de JK Anime
+    const urlRegex = /https?:\/\/jkanime\.net\/([a-z0-9-]+)\//g;
+    let urlMatch;
+    while ((urlMatch = urlRegex.exec(texto)) !== null) {
+      const slug = urlMatch[1];
+      if (slug && slug.length > 3) {
+        const nombre = slug.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+        animes.push(nombre);
       }
     }
     
-    // Eliminar duplicados
-    return [...new Set(animes)];
+    // Buscar por líneas
+    const lineas = texto.split('\n');
+    for (const linea of lineas) {
+      const limpia = limpiarNombre(linea);
+      
+      if (
+        limpia.length > 3 &&
+        !limpia.includes('http') &&
+        !limpia.includes('jkanime') &&
+        !limpia.includes('---') &&
+        !limpia.includes('A día') &&
+        !limpia.includes('catálogo') &&
+        !limpia.includes('Continuaciones') &&
+        !limpia.includes('Nuevas') &&
+        !limpia.includes('Infaltable') &&
+        !limpia.includes('Transmisión') &&
+        !limpia.includes('¿Te interesa') &&
+        !limpia.includes('Detectar') &&
+        !limpia.includes('Peticiones') &&
+        !limpia.includes('🤖') &&
+        !limpia.includes('🔍') &&
+        !limpia.startsWith('!') &&
+        !limpia.startsWith('=')
+      ) {
+        animes.push(limpia);
+      }
+    }
+    
+    return [...new Set(animes)].filter(n => n.length > 3);
   };
 
-  // Buscar en JK Anime
-  const buscarEnJK = async (nombre: string): Promise<string | null> => {
+  // Detectar con IA (Hugging Face - gratis)
+  const detectarAnimesConIA = async (texto: string): Promise<string[]> => {
     try {
-      const slug = nombre.toLowerCase()
-        .replace(/[^a-z0-9\s]/g, '')
-        .replace(/\s+/g, '-');
+      const prompt = `Extract ONLY anime titles from this text. Return each title on a new line, nothing else:\n\n${texto}`;
       
       const response = await fetch(
-        `/api/buscar-jk?nombre=${encodeURIComponent(nombre)}`
+        'https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.3',
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            inputs: prompt,
+            parameters: {
+              max_new_tokens: 200,
+              temperature: 0.1,
+              return_full_text: false,
+            },
+          }),
+        }
       );
-      const data = await response.json();
-      
-      if (data.slug) return data.slug;
-      return slug;
-    } catch {
-      return nombre.toLowerCase().replace(/\s+/g, '-');
+
+      if (response.ok) {
+        const data = await response.json();
+        const generado = data[0]?.generated_text || '';
+        
+        // Limpiar la respuesta de la IA
+        const lineas = generado
+          .split('\n')
+          .map(l => l.trim())
+          .filter(l => 
+            l.length > 3 && 
+            !l.startsWith('Extract') && 
+            !l.startsWith('Return') && 
+            !l.includes(':') &&
+            !l.startsWith('```')
+          );
+        
+        const nombres = lineas.map(l => limpiarNombre(l));
+        const resultados = [...new Set(nombres)].filter(n => n.length > 3);
+        
+        if (resultados.length > 0) return resultados;
+      }
+    } catch (err) {
+      console.error('IA falló:', err);
     }
+    
+    // Fallback al detector local
+    return detectarAnimesLocal(texto);
   };
 
   const analizarPeticion = async () => {
     setAnalizando(true);
     setMensaje('');
     
-    const nombres = detectarAnimes(texto);
+    const nombres = modoIA 
+      ? await detectarAnimesConIA(texto)
+      : detectarAnimesLocal(texto);
     
     if (nombres.length === 0) {
-      setMensaje('⚠️ No se detectaron nombres de anime en el texto.');
+      setMensaje('⚠️ No se detectaron nombres de anime. Prueba con texto más claro.');
       setAnalizando(false);
       return;
     }
@@ -131,7 +154,7 @@ export default function PeticionesPage() {
     const resultados: AnimeDetectado[] = [];
 
     for (const nombre of nombres) {
-      // Buscar en Supabase con el nombre limpio
+      // Buscar en Supabase
       const { data } = await supabase
         .from('animes')
         .select('*')
@@ -148,9 +171,7 @@ export default function PeticionesPage() {
         }
 
         resultados.push({
-          nombre: nombre,
-          nombreLimpio: nombre,
-          slug: '',
+          nombre,
           enBD: true,
           animeId: anime.id,
           encontrado: {
@@ -161,12 +182,7 @@ export default function PeticionesPage() {
           },
         });
       } else {
-        resultados.push({
-          nombre: nombre,
-          nombreLimpio: nombre,
-          slug: '',
-          enBD: false,
-        });
+        resultados.push({ nombre, enBD: false });
       }
     }
 
@@ -178,13 +194,11 @@ export default function PeticionesPage() {
     setMensaje(`🔄 Buscando "${nombre}" en JK Anime...`);
     
     try {
-      const response = await fetch(
-        `/api/agregar-anime?nombre=${encodeURIComponent(nombre)}`
-      );
+      const response = await fetch(`/api/agregar-anime?nombre=${encodeURIComponent(nombre)}`);
       const data = await response.json();
       
       if (data.success) {
-        setMensaje(`✅ "${nombre}" agregado correctamente!`);
+        setMensaje(`✅ "${nombre}" agregado!`);
         analizarPeticion();
       } else {
         setMensaje(`❌ No se pudo agregar: ${data.error}`);
@@ -200,11 +214,13 @@ export default function PeticionesPage() {
     
     let agregados = 0;
     for (const faltante of faltantes) {
-      const response = await fetch(
-        `/api/agregar-anime?nombre=${encodeURIComponent(faltante.nombreLimpio)}`
-      );
-      const data = await response.json();
-      if (data.success) agregados++;
+      try {
+        const response = await fetch(`/api/agregar-anime?nombre=${encodeURIComponent(faltante.nombre)}`);
+        const data = await response.json();
+        if (data.success) agregados++;
+      } catch (err) {
+        // continuar
+      }
     }
     
     setMensaje(`✅ ${agregados}/${faltantes.length} animes agregados!`);
@@ -214,9 +230,19 @@ export default function PeticionesPage() {
   return (
     <main className="min-h-screen bg-zinc-950 pb-16">
       <div className="mx-auto max-w-5xl px-4 py-8">
-        <h1 className="text-2xl font-black text-white mb-2">
-          🤖 Peticiones al <span className="text-blue-400">Bot</span>
-        </h1>
+        <div className="flex items-center justify-between mb-2">
+          <h1 className="text-2xl font-black text-white">
+            🤖 Peticiones al <span className="text-blue-400">Bot</span>
+          </h1>
+          <button
+            onClick={() => setModoIA(!modoIA)}
+            className={`rounded-lg px-3 py-1.5 text-[10px] font-bold ${
+              modoIA ? 'bg-purple-600 text-white' : 'bg-zinc-800 text-zinc-400'
+            }`}
+          >
+            {modoIA ? '🧠 IA ON' : '📝 IA OFF'}
+          </button>
+        </div>
         <p className="text-xs text-zinc-500 mb-6">
           Pega un artículo con nombres de anime. El bot detectará cuáles tienes y cuáles faltan.
         </p>
@@ -227,7 +253,7 @@ export default function PeticionesPage() {
             onChange={(e) => setTexto(e.target.value)}
             rows={8}
             className="w-full rounded-xl border border-zinc-700 bg-zinc-900 p-4 text-sm text-white focus:border-blue-500 focus:outline-none resize-none"
-            placeholder="Pega aquí tu texto..."
+            placeholder="Pega aquí tu texto o URLs de JK Anime..."
           />
           <button
             onClick={analizarPeticion}
@@ -259,7 +285,7 @@ export default function PeticionesPage() {
                   onClick={agregarTodos}
                   className="rounded-lg bg-green-600 px-4 py-2 text-xs font-bold text-white hover:bg-green-500"
                 >
-                  + Agregar Todos los Faltantes
+                  + Agregar Todos
                 </button>
               )}
             </div>
@@ -277,7 +303,7 @@ export default function PeticionesPage() {
                   {resultado.enBD && resultado.encontrado?.portada_url ? (
                     <img
                       src={resultado.encontrado.portada_url}
-                      alt={resultado.nombreLimpio}
+                      alt={resultado.nombre}
                       className="h-14 w-10 rounded object-cover"
                     />
                   ) : (
@@ -286,7 +312,7 @@ export default function PeticionesPage() {
                     </div>
                   )}
                   <div>
-                    <h3 className="text-sm font-bold text-white">{resultado.nombreLimpio}</h3>
+                    <h3 className="text-sm font-bold text-white">{resultado.nombre}</h3>
                     {resultado.enBD && resultado.encontrado ? (
                       <p className="text-xs text-green-400">
                         ✓ Disponible · {resultado.encontrado.episodios} eps
@@ -306,7 +332,7 @@ export default function PeticionesPage() {
                   </Link>
                 ) : (
                   <button
-                    onClick={() => agregarAnime(resultado.nombreLimpio)}
+                    onClick={() => agregarAnime(resultado.nombre)}
                     className="rounded-lg bg-green-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-green-500"
                   >
                     + Agregar

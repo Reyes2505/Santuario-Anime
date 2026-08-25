@@ -2,12 +2,9 @@ name: Bot Ectosimbionte - Sincronización
 
 on:
   schedule:
-    # Hora Perú (UTC-5)
-    # 11:30 AM Perú = 16:30 UTC
-    # 2:00 PM Perú = 19:00 UTC
-    - cron: '30 16 * * *'   # 11:30 AM Perú
-    - cron: '0 19 * * *'    # 2:00 PM Perú
-  workflow_dispatch:  # Permite ejecución manual
+    - cron: '30 15 * * *'   # 10:30 AM Perú (UTC-5)
+    - cron: '0 19 * * *'    # 2:00 PM Perú (UTC-5)
+  workflow_dispatch:
 
 jobs:
   sync:
@@ -23,12 +20,10 @@ jobs:
           python-version: '3.11'
       
       - name: Install dependencies
-        run: |
-          pip install requests beautifulsoup4 supabase
+        run: pip install requests beautifulsoup4 supabase
       
       - name: Run bot
         env:
-          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
-        run: |
-          python bot_jkanime.py
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+        run: python bot_jkanime.py

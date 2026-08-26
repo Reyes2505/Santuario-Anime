@@ -380,16 +380,16 @@ class EctosimbionteBot:
         
         logger.info(f'Directorio: {len(animes)} | BD: {len(existentes)}')
         
-        activos = [a for a in animes if a.get('estado') == 'currently']
-        finalizados = [a for a in animes if a.get('estado') == 'finished']
-        
-        activos_en_bd = [a for a in activos if a['titulo'] in existentes]
-        activos_nuevos = [a for a in activos if a['titulo'] not in existentes]
-        finalizados_nuevos = [a for a in finalizados if a['titulo'] not in existentes]
-        
-        for anime in activos_en_bd[:5]:
+       # Obtener todos los animes del directorio que ya existen en nuestra BD
+        todos_en_bd = [a for a in animes if a['titulo'] in existentes]
+        activos_nuevos = [a for a in animes if a.get('estado') == 'currently' and a['titulo'] not in existentes]
+        finalizados_nuevos = [a for a in animes if a.get('estado') == 'finished' and a['titulo'] not in existentes]
+
+        # Auto-reparación masiva: Revisar y actualizar enlaces de cualquier anime ya registrado en BD
+        logger.info(f'🔄 Verificando y auto-reparando enlaces de {len(todos_en_bd)} animes existentes...')
+        for anime in todos_en_bd:
             self.sync_anime(anime, cache)
-            time.sleep(0.5)
+            time.sleep(0.3)
         
         candidatos = activos_nuevos[:10] + finalizados_nuevos[:10]
         if candidatos:

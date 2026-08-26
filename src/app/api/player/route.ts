@@ -1,26 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-/**
- * Player API - Production Ready (Unified Episode & Stream Resolver)
- * 
- * Arquitectura y Seguridad:
- * - Prevención de SSRF mediante Whitelist de dominios.
- * - Control de hilos mediante AbortController (Timeout estricto).
- * - Sanitización de inputs contra inyecciones XSS.
- * - Políticas No-Cache en CDN para asegurar la vigencia de los tokens.
- * - Resolución unificada a partir de la URL de la página del episodio.
- * 
- * Configuración HLS:
- * - Buffer de 90 segundos para mitigar latencia y microcortes.
- * - Adaptive Bitrate (ABR) inicializado en nivel 0 (estabilidad prioritaria).
- * - Recuperación automática ante fallos de red.
- * 
- * Resolución de Servidores:
- * - Extracción mediante RegExp con modificador global y dotAll (/gs).
- * - Decodificación dinámica en Base64 de los 10 servidores alternativos.
- * - UI inyectada para selección manual de servidores de respaldo.
- */
-
 const ALLOWED_HOSTNAMES = ['jkanime.net'];
 const FETCH_TIMEOUT_MS = 6000;
 const DEFAULT_USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36';
@@ -71,29 +50,53 @@ async function extractM3u8Stream(html: string): Promise<string | null> {
   const umMatch = html.match(/https?:\/\/jkanime\.net\/jkplayer\/um\?e=[^\s"']+/);
   if (!umMatch) return null;
 
-  const umRes = await fetchWithTimeout(umMatch[0]);
-  if (!umRes.ok) return null;
+  try {
+    const umRes = await fetchWithTimeout(umMatch[0]);
+    if (!umRes.ok) return null;
 
-  const umHtml = await umRes.text();
-  const m3u8Match = umHtml.match(/https?:\/\/[^\s"']+\.m3u8[^\s"']*/);
-  
-  return m3u8Match ? m3u8Match[0] : null;
+    const umHtml = await umRes.text();
+    const m3u8Match = umHtml.match(/https?:\/\/[^\s"']+\.m3u8[^\s"']*/);
+    return m3u8Match ? m3u8Match[0] : null;
+  } catch {
+    return null;
+  }
 }
 
 function extractServidores(html: string): { nombre: string; url: string }[] {
   const servidores: { nombre: string; url: string }[] = [];
   const seen = new Set<string>();
 
-  const regex = /{"remote":"([^"]+)".*?"server":"([^"]+)"}/gs;
+  // 1. Buscar formato JSON directo ({"remote":"...","server":"..."})
+  const regexJson = /{"remote":"([^"]+)".*?"server":"([^"]+)"}/gs;
   let match;
-
-  while ((match = regex.exec(html)) !== null) {
+  while ((match = regexJson.exec(html)) !== null) {
     const urlDecodificada = decodeBase64(match[1]);
     const nombre = match[2].toLowerCase();
-
     if (!seen.has(urlDecodificada)) {
       seen.add(urlDecodificada);
       servidores.push({ nombre, url: urlDecodificada });
+    }
+  }
+
+  // 2. Buscar formato de array JS clásico de JK Anime (var servers = [{...}])
+  const regexJsArray = /var\s+servers\s*=\s*(\[.*?\]);/s;
+  const arrayMatch = html.match(regexJsArray);
+  if (arrayMatch) {
+    try {
+      // Parseo flexible del array de servidores extraído del script
+      const rawServers = JSON.parse(arrayMatch[1].replace(/'/g, '"'));
+      for (const s of rawServers) {
+        if (s.remote && s.server) {
+          const urlDecodificada = decodeBase64(s.remote);
+          const nombre = String(s.server).toLowerCase();
+          if (!seen.has(urlDecodificada)) {
+            seen.add(urlDecodificada);
+            servidores.push({ nombre, url: urlDecodificada });
+          }
+        }
+      }
+    } catch (e) {
+      console.error('[Parser Error]: No se pudo parsear el array de servidores JS', e);
     }
   }
 
@@ -181,7 +184,7 @@ function buildPlayerHtml(m3u8Url: string, servidores: { nombre: string; url: str
     }
     
     function cargarServidor(url) {
-      if (url.includes('/embed') || url.includes('/e/') || url.includes('mega.nz')) {
+      if (url.includes('/embed') || url.includes('/e/') || url.includes('mega.nz') || url.includes('mediafire.com')) {
         window.open(url, '_blank');
       } else {
         cargarHls(url);

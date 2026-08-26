@@ -16,7 +16,8 @@ import { NextRequest, NextResponse } from 'next/server';
  * - Recuperación automática ante fallos de red.
  * 
  * Resolución de Servidores:
- * - Extracción y decodificación dinámica en Base64.
+ * - Extracción mediante RegExp con modificador global y dotAll (/gs).
+ * - Decodificación dinámica en Base64.
  * - UI inyectada para selección manual de servidores de respaldo.
  */
 
@@ -83,7 +84,7 @@ function extractServidores(html: string): { nombre: string; url: string }[] {
   const servidores: { nombre: string; url: string }[] = [];
   const seen = new Set<string>();
 
-  const regex = /{"remote":"([^"]+)".*?"server":"([^"]+)"}/g;
+  const regex = /{"remote":"([^"]+)".*?"server":"([^"]+)"}/gs;
   let match;
 
   while ((match = regex.exec(html)) !== null) {
@@ -118,7 +119,7 @@ function buildPlayerHtml(m3u8Url: string, servidores: { nombre: string; url: str
     html, body { height: 100%; background: #000; overflow: hidden; }
     body { display: flex; flex-direction: column; }
     #video { flex: 1; width: 100%; object-fit: contain; }
-    .servers { padding: 6px 8px; background: #0a0a0a; display: flex; gap: 4px; overflow-x: auto; border-top: 1px solid #1a1a1a; }
+    .servers { padding: 6px 8px; background: #0a0a0a; display: flex; gap: 4px; overflow-x: auto; border-top: 1px solid #1a1a1a; min-height: 40px; align-items: center; }
     .btn-server { padding: 5px 10px; background: #1a1a1a; color: #ccc; border: 1px solid #333; border-radius: 3px; cursor: pointer; font-size: 10px; font-family: monospace; white-space: nowrap; transition: background 0.2s; }
     .btn-server:hover { background: #2a2a2a; color: #fff; }
   </style>
@@ -188,7 +189,14 @@ function buildPlayerHtml(m3u8Url: string, servidores: { nombre: string; url: str
     }
     
     const defaultUrl = "${m3u8Url ? m3u8Url.replace(/"/g, '\\"') : ''}";
-    if (defaultUrl) cargarHls(defaultUrl);
+    if (defaultUrl) {
+      cargarHls(defaultUrl);
+    } else {
+      const servers = ${JSON.stringify(servidores)};
+      if (servers.length > 0) {
+        cargarServidor(servers[0].url);
+      }
+    }
   </script>
 </body>
 </html>`;

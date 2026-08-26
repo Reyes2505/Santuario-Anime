@@ -5,8 +5,6 @@ import { Episodio } from '@/types/database';
 
 interface VideoPlayerProps {
   episodio: Episodio;
-  onNextEpisode?: () => void;
-  onPrevEpisode?: () => void;
 }
 
 export default function VideoPlayer({ episodio }: VideoPlayerProps) {
@@ -17,28 +15,28 @@ export default function VideoPlayer({ episodio }: VideoPlayerProps) {
   const isM3U8 = url.includes('.m3u8');
   const isJkPlayer = url.includes('jkplayer') || url.includes('jkanime.net');
 
-  // Para M3U8, intentar reconstruir la URL de JK Player
-  // o mostrar botón para abrir en JK Anime
-  if (isM3U8 && !isJkPlayer) {
-    // Construir URL de la página del episodio en JK Anime
-    // El slug y número del episodio están en la BD
-    const jkPageUrl = `https://jkanime.net/${episodio.titulo?.toLowerCase().replace(/\s+/g, '-')}/${episodio.numero}/`;
+  // Para M3U8, buscar el slug del anime y construir URL de JK Anime
+  if (isM3U8) {
+    const slug = episodio.titulo?.toLowerCase().replace(/[^a-z0-9\s]/g, '').replace(/\s+/g, '-') || 'mushoku-tensei';
+    const jkUrl = `https://jkanime.net/${slug}/${episodio.numero}/`;
     
     return (
       <div className="w-full max-w-5xl mx-auto space-y-4">
-        <div className="relative aspect-video w-full overflow-hidden rounded-xl border border-zinc-800 bg-black flex flex-col items-center justify-center p-8">
-          <div className="text-5xl mb-4">HLS no soportado</div>
-          <p className="text-sm text-zinc-400 text-center mb-4">
-            Este episodio tiene una URL HLS que no se puede reproducir directamente.
-            Abre en JK Anime para verlo.
-          </p>
-          <a
-            href={jkPageUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="rounded-lg bg-blue-600 px-6 py-3 text-sm font-bold text-white hover:bg-blue-500"
-          >
-            Ver en JK Anime
+        <div className="relative aspect-video w-full overflow-hidden rounded-xl border border-zinc-800 bg-black">
+          <iframe
+            key={episodio.id}
+            src={`/api/player?url=${encodeURIComponent(jkUrl)}&autoplay=1`}
+            className="h-full w-full"
+            allowFullScreen
+            allow="autoplay; encrypted-media; fullscreen"
+            onError={() => setIframeError(true)}
+            title={`Episodio ${episodio.numero}`}
+          />
+        </div>
+        <div className="p-4 rounded-xl border border-zinc-800 bg-zinc-900/40 flex items-center justify-between">
+          <h2 className="text-sm font-bold text-white">Episodio {episodio.numero}</h2>
+          <a href={jkUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-400">
+            Abrir en JK Anime
           </a>
         </div>
       </div>
@@ -56,8 +54,8 @@ export default function VideoPlayer({ episodio }: VideoPlayerProps) {
     );
   }
 
-  // JK Player - iframe con proxy
-  if (!iframeError) {
+  // JK Player directo
+  if (isJkPlayer && !iframeError) {
     return (
       <div className="w-full max-w-5xl mx-auto space-y-4">
         <div className="relative aspect-video w-full overflow-hidden rounded-xl border border-zinc-800 bg-black">
@@ -70,12 +68,6 @@ export default function VideoPlayer({ episodio }: VideoPlayerProps) {
             onError={() => setIframeError(true)}
             title={`Episodio ${episodio.numero}`}
           />
-        </div>
-        <div className="p-4 rounded-xl border border-zinc-800 bg-zinc-900/40 flex items-center justify-between">
-          <h2 className="text-sm font-bold text-white">Episodio {episodio.numero}</h2>
-          <a href={url} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-400">
-            Abrir en JK Anime
-          </a>
         </div>
       </div>
     );

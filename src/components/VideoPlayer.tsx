@@ -1,7 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Episodio } from '@/types/database';
+import { supabase } from '@/lib/supabase';
 
 interface VideoPlayerProps {
   episodio: Episodio;
@@ -9,16 +10,51 @@ interface VideoPlayerProps {
 
 export default function VideoPlayer({ episodio }: VideoPlayerProps) {
   const [iframeError, setIframeError] = useState(false);
+  const [animeSlug, setAnimeSlug] = useState('');
 
   const url = episodio.url_stream || '';
   const isLocal = url.startsWith('/videos/');
   const isM3U8 = url.includes('.m3u8');
   const isJkPlayer = url.includes('jkplayer') || url.includes('jkanime.net');
 
-  // Para M3U8, buscar el slug del anime y construir URL de JK Anime
-  if (isM3U8) {
-    const slug = episodio.titulo?.toLowerCase().replace(/[^a-z0-9\s]/g, '').replace(/\s+/g, '-') || 'mushoku-tensei';
-    const jkUrl = `https://jkanime.net/${slug}/${episodio.numero}/`;
+  // Obtener el slug del anime desde Supabase
+  useEffect(() => {
+    async function getAnimeSlug() {
+      try {
+        const { data: temporada } = await supabase
+          .from('temporadas')
+          .select('anime_id')
+          .eq('id', episodio.temporada_id)
+          .single();
+
+        if (temporada) {
+          const { data: anime } = await supabase
+            .from('animes')
+            .select('titulo')
+            .eq('id', temporada.anime_id)
+            .single();
+
+          if (anime) {
+            const slug = anime.titulo
+              .toLowerCase()
+              .replace(/[^a-z0-9\s]/g, '')
+              .replace(/\s+/g, '-');
+            setAnimeSlug(slug);
+          }
+        }
+      } catch (err) {
+        console.error('Error obteniendo slug:', err);
+      }
+    }
+
+    if (isM3U8) {
+      getAnimeSlug();
+    }
+  }, [episodio.temporada_id, episodio.numero, isM3U8]);
+
+  // Para M3U8, usar la página de JK Anime
+  if (isM3U8 && animeSlug) {
+    const jkUrl = `https://jkanime.net/${animeSlug}/${episodio.numero}/`;
     
     return (
       <div className="w-full max-w-5xl mx-auto space-y-4">

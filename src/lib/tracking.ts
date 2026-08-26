@@ -1,69 +1,100 @@
-// src/lib/tracking.ts
+// src/lib/tracking.ts - Versión segura con separación por usuario
 import { Anime, Episodio } from '@/types/database';
+import { supabase } from './supabase';
 
-const STORAGE_KEY = 'santuario_tracking_v1';
+const STORAGE_KEY = 'santuario_tracking_v2';
 
 export interface TrackingData {
   animeId: string;
   estado: 'viendo' | 'visto' | 'por_ver';
   ultimoEpisodio: number;
-  progreso: number; // 0-100
+  progreso: number;
   actualizadoEn: number;
+  userId?: string;
 }
 
-export function getTracking(): Record<string, TrackingData> {
+// Obtener el usuario actual
+async function getUserId(): Promise<string> {
+  const { data: { session } } = await supabase.auth.getSession();
+  return session?.user?.id || 'guest';
+}
+
+// Obtener la clave de almacenamiento específica del usuario
+function getStorageKey(userId: string): string {
+  return `${STORAGE_KEY}_${userId}`;
+}
+
+export async function getTracking(): Promise<Record<string, TrackingData>> {
   if (typeof window === 'undefined') return {};
+  
+  const userId = await getUserId();
+  const key = getStorageKey(userId);
+  
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = localStorage.getItem(key);
     return raw ? JSON.parse(raw) : {};
   } catch {
     return {};
   }
 }
 
-export function saveTracking(data: Record<string, TrackingData>) {
+export async function saveTracking(data: Record<string, TrackingData>) {
   if (typeof window === 'undefined') return;
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  
+  const userId = await getUserId();
+  const key = getStorageKey(userId);
+  
+  localStorage.setItem(key, JSON.stringify(data));
 }
 
-export function marcarComoViendo(animeId: string, ultimoEpisodio: number) {
-  const tracking = getTracking();
+export async function marcarComoViendo(animeId: string, ultimoEpisodio: number) {
+  const tracking = await getTracking();
+  const userId = await getUserId();
+  
   tracking[animeId] = {
     animeId,
     estado: 'viendo',
     ultimoEpisodio,
     progreso: 50,
     actualizadoEn: Date.now(),
+    userId,
   };
-  saveTracking(tracking);
+  await saveTracking(tracking);
 }
 
-export function marcarComoVisto(animeId: string) {
-  const tracking = getTracking();
+export async function marcarComoVisto(animeId: string) {
+  const tracking = await getTracking();
+  const userId = await getUserId();
+  
   tracking[animeId] = {
     animeId,
     estado: 'visto',
     ultimoEpisodio: 999,
     progreso: 100,
     actualizadoEn: Date.now(),
+    userId,
   };
-  saveTracking(tracking);
+  await saveTracking(tracking);
 }
 
-export function marcarPorVer(animeId: string) {
-  const tracking = getTracking();
+export async function marcarPorVer(animeId: string) {
+  const tracking = await getTracking();
+  const userId = await getUserId();
+  
   tracking[animeId] = {
     animeId,
     estado: 'por_ver',
     ultimoEpisodio: 0,
     progreso: 0,
     actualizadoEn: Date.now(),
+    userId,
   };
-  saveTracking(tracking);
+  await saveTracking(tracking);
 }
 
-export function guardarProgreso(animeId: string, episodioNum: number, timestamp: number, duracion: number) {
-  const tracking = getTracking();
+export async function guardarProgreso(animeId: string, episodioNum: number, timestamp: number, duracion: number) {
+  const tracking = await getTracking();
+  const userId = await getUserId();
   const progreso = duracion > 0 ? Math.floor((timestamp / duracion) * 100) : 0;
   
   tracking[animeId] = {
@@ -72,18 +103,22 @@ export function guardarProgreso(animeId: string, episodioNum: number, timestamp:
     ultimoEpisodio: episodioNum,
     progreso,
     actualizadoEn: Date.now(),
+    userId,
   };
-  saveTracking(tracking);
+  await saveTracking(tracking);
 }
 
-export function getAnimesViendo(): TrackingData[] {
-  return Object.values(getTracking()).filter(t => t.estado === 'viendo');
+export async function getAnimesViendo(): Promise<TrackingData[]> {
+  const tracking = await getTracking();
+  return Object.values(tracking).filter(t => t.estado === 'viendo');
 }
 
-export function getAnimesVistos(): TrackingData[] {
-  return Object.values(getTracking()).filter(t => t.estado === 'visto');
+export async function getAnimesVistos(): Promise<TrackingData[]> {
+  const tracking = await getTracking();
+  return Object.values(tracking).filter(t => t.estado === 'visto');
 }
 
-export function getAnimesPorVer(): TrackingData[] {
-  return Object.values(getTracking()).filter(t => t.estado === 'por_ver');
+export async function getAnimesPorVer(): Promise<TrackingData[]> {
+  const tracking = await getTracking();
+  return Object.values(tracking).filter(t => t.estado === 'por_ver');
 }

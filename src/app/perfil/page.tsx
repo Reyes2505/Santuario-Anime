@@ -71,8 +71,10 @@ export default function PerfilPage() {
       const esAdmin = ADMIN_EMAILS.includes(session.user.email || '');
       setRol(esAdmin ? 'admin' : 'user');
 
-      // Cargar perfil de localStorage
-      const saved = localStorage.getItem('santuario_profile');
+      // Clave específica por usuario
+      const userKey = `santuario_profile_${session.user.id}`;
+      const saved = localStorage.getItem(userKey);
+      
       if (saved) {
         const data = JSON.parse(saved);
         setUsername(data.username || 'Anime Otaku');
@@ -83,7 +85,7 @@ export default function PerfilPage() {
       }
 
       setStats(getEstadisticasUsuario());
-      setTracking(getTracking());
+      setTracking(await getTracking());
       setLoading(false);
     }
     load();
@@ -91,7 +93,9 @@ export default function PerfilPage() {
 
   const handleSave = () => {
     const profileData = { username, bio, avatar, genero: generoFavorito, banner: bannerIndex };
-    localStorage.setItem('santuario_profile', JSON.stringify(profileData));
+    // Guardar con clave específica del usuario
+    const userKey = `santuario_profile_${user?.id || 'guest'}`;
+    localStorage.setItem(userKey, JSON.stringify(profileData));
     setIsEditing(false);
     setShowAvatarPicker(false);
     alert('✅ Perfil guardado correctamente');
@@ -116,34 +120,33 @@ export default function PerfilPage() {
 
   return (
     <main className="min-h-screen bg-zinc-950 pb-16">
-      {/* Banner con gradiente */}
+      {/* Banner */}
       <div className={`relative h-48 bg-gradient-to-r ${BANNERS[bannerIndex]} border-b border-zinc-800/50`}>
         <div className="absolute inset-0 opacity-20" style={{
           backgroundImage: 'radial-gradient(circle at 20% 50%, rgba(59,130,246,0.4) 0%, transparent 50%), radial-gradient(circle at 80% 50%, rgba(168,85,247,0.4) 0%, transparent 50%)'
         }} />
         <button
           onClick={() => setBannerIndex((bannerIndex + 1) % BANNERS.length)}
-          className="absolute bottom-3 right-4 rounded-lg bg-zinc-900/60 px-3 py-1.5 text-[10px] font-bold text-zinc-300 hover:bg-zinc-800 transition-all"
+          className="absolute bottom-3 right-4 rounded-lg bg-zinc-900/60 px-3 py-1.5 text-[10px] font-bold text-zinc-300 hover:bg-zinc-800"
         >
           🎨 Cambiar Banner
         </button>
       </div>
 
       <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
-        {/* Tarjeta de perfil */}
         <div className="relative -mt-16">
-          <div className="rounded-2xl border border-zinc-800/60 bg-zinc-900/70 backdrop-blur-xl p-6 shadow-2xl shadow-black/50">
+          <div className="rounded-2xl border border-zinc-800/60 bg-zinc-900/70 backdrop-blur-xl p-6 shadow-2xl">
             <div className="flex flex-col sm:flex-row items-start gap-6">
               {/* Avatar */}
               <div className="relative group">
                 <img
                   src={avatar}
                   alt={username}
-                  className="h-28 w-28 sm:h-32 sm:w-32 rounded-2xl object-cover border-2 border-blue-500/50 shadow-lg shadow-blue-500/20 transition-all group-hover:border-blue-400"
+                  className="h-28 w-28 sm:h-32 sm:w-32 rounded-2xl object-cover border-2 border-blue-500/50 shadow-lg"
                 />
                 <button
                   onClick={() => setShowAvatarPicker(!showAvatarPicker)}
-                  className="absolute -bottom-2 -right-2 h-8 w-8 rounded-lg bg-blue-600 text-white flex items-center justify-center text-xs shadow-lg hover:bg-blue-500 transition-all"
+                  className="absolute -bottom-2 -right-2 h-8 w-8 rounded-lg bg-blue-600 text-white flex items-center justify-center text-xs"
                 >
                   📷
                 </button>
@@ -167,17 +170,15 @@ export default function PerfilPage() {
                   <div className="flex gap-2">
                     <button
                       onClick={() => setIsEditing(!isEditing)}
-                      className={`rounded-xl px-4 py-2 text-xs font-bold transition-all active:scale-95 ${
-                        isEditing
-                          ? 'bg-green-600 text-white'
-                          : 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg shadow-blue-600/30'
+                      className={`rounded-xl px-4 py-2 text-xs font-bold ${
+                        isEditing ? 'bg-green-600 text-white' : 'bg-gradient-to-r from-blue-600 to-purple-600 text-white'
                       }`}
                     >
                       {isEditing ? '✅ Guardar' : '✏️ Editar'}
                     </button>
                     <button
                       onClick={handleLogout}
-                      className="rounded-xl bg-red-600 px-4 py-2 text-xs font-bold text-white hover:bg-red-500 transition-all"
+                      className="rounded-xl bg-red-600 px-4 py-2 text-xs font-bold text-white"
                     >
                       🚪 Salir
                     </button>
@@ -192,7 +193,7 @@ export default function PerfilPage() {
                         type="text"
                         value={username}
                         onChange={(e) => setUsername(e.target.value)}
-                        className="w-full rounded-lg border border-zinc-700 bg-zinc-800 px-4 py-2.5 text-sm text-white focus:border-blue-500 focus:outline-none"
+                        className="w-full rounded-lg border border-zinc-700 bg-zinc-800 px-4 py-2.5 text-sm text-white"
                       />
                     </div>
                     <div>
@@ -201,7 +202,7 @@ export default function PerfilPage() {
                         value={bio}
                         onChange={(e) => setBio(e.target.value)}
                         rows={3}
-                        className="w-full rounded-lg border border-zinc-700 bg-zinc-800 px-4 py-2.5 text-sm text-white focus:border-blue-500 focus:outline-none resize-none"
+                        className="w-full rounded-lg border border-zinc-700 bg-zinc-800 px-4 py-2.5 text-sm text-white resize-none"
                       />
                     </div>
                     <div>
@@ -211,10 +212,8 @@ export default function PerfilPage() {
                           <button
                             key={genero}
                             onClick={() => setGeneroFavorito(genero)}
-                            className={`px-2.5 py-1 rounded-lg text-[10px] font-bold transition-all ${
-                              generoFavorito === genero
-                                ? 'bg-purple-600 text-white'
-                                : 'bg-zinc-800 text-zinc-400 hover:bg-zinc-700'
+                            className={`px-2.5 py-1 rounded-lg text-[10px] font-bold ${
+                              generoFavorito === genero ? 'bg-purple-600 text-white' : 'bg-zinc-800 text-zinc-400'
                             }`}
                           >
                             {genero}
@@ -229,7 +228,6 @@ export default function PerfilPage() {
               </div>
             </div>
 
-            {/* Selector de avatar */}
             {showAvatarPicker && (
               <div className="mt-4 pt-4 border-t border-zinc-800/50">
                 <p className="text-xs font-semibold text-zinc-400 mb-2">Elige tu avatar:</p>
@@ -238,8 +236,8 @@ export default function PerfilPage() {
                     <button
                       key={a}
                       onClick={() => setAvatar(a)}
-                      className={`h-12 w-12 rounded-xl border-2 transition-all ${
-                        avatar === a ? 'border-blue-500 scale-110' : 'border-transparent hover:border-zinc-600'
+                      className={`h-12 w-12 rounded-xl border-2 ${
+                        avatar === a ? 'border-blue-500 scale-110' : 'border-transparent'
                       }`}
                     >
                       <img src={a} alt="avatar" className="h-full w-full rounded-xl object-cover" />
@@ -257,10 +255,8 @@ export default function PerfilPage() {
             <button
               key={tab}
               onClick={() => setTabActiva(tab)}
-              className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${
-                tabActiva === tab
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-zinc-900 text-zinc-400 hover:bg-zinc-800'
+              className={`px-4 py-2 rounded-lg text-xs font-bold ${
+                tabActiva === tab ? 'bg-blue-600 text-white' : 'bg-zinc-900 text-zinc-400'
               }`}
             >
               {tab === 'estadisticas' ? '📊 Estadísticas' : tab === 'logros' ? '🏆 Logros' : '🎯 Géneros'}
@@ -268,7 +264,6 @@ export default function PerfilPage() {
           ))}
         </div>
 
-        {/* Contenido de tabs */}
         {tabActiva === 'estadisticas' && (
           <div className="mt-4 grid grid-cols-2 sm:grid-cols-4 gap-3">
             <div className="rounded-xl border border-blue-500/30 bg-blue-950/30 p-4 text-center">
@@ -287,10 +282,6 @@ export default function PerfilPage() {
               <div className="text-3xl font-black text-purple-400">{stats?.episodiosVistos || 0}</div>
               <div className="text-[10px] text-purple-300 font-semibold mt-1">🎬 EPISODIOS</div>
             </div>
-            <div className="rounded-xl border border-amber-500/30 bg-amber-950/30 p-4 text-center col-span-2 sm:col-span-4">
-              <div className="text-3xl font-black text-amber-400">{stats?.tiempoTotalMinutos || 0}m</div>
-              <div className="text-[10px] text-amber-300 font-semibold mt-1">⏱️ TIEMPO TOTAL VISTO</div>
-            </div>
           </div>
         )}
 
@@ -302,9 +293,7 @@ export default function PerfilPage() {
                 <div
                   key={logro.nombre}
                   className={`rounded-xl border p-4 flex items-center gap-4 ${
-                    desbloqueado
-                      ? 'border-amber-500/40 bg-amber-950/20'
-                      : 'border-zinc-800/60 bg-zinc-900/30 opacity-50'
+                    desbloqueado ? 'border-amber-500/40 bg-amber-950/20' : 'border-zinc-800/60 bg-zinc-900/30 opacity-50'
                   }`}
                 >
                   <div className="text-3xl">{desbloqueado ? logro.icon : '🔒'}</div>
@@ -312,9 +301,7 @@ export default function PerfilPage() {
                     <h3 className="text-sm font-bold text-white">{logro.nombre}</h3>
                     <p className="text-xs text-zinc-500">{logro.descripcion}</p>
                   </div>
-                  {desbloqueado && (
-                    <span className="ml-auto text-[10px] font-bold text-amber-400">✅ DESBLOQUEADO</span>
-                  )}
+                  {desbloqueado && <span className="ml-auto text-[10px] font-bold text-amber-400">✅ DESBLOQUEADO</span>}
                 </div>
               );
             })}
@@ -332,10 +319,7 @@ export default function PerfilPage() {
                   <div key={g.genero} className="flex items-center gap-3">
                     <span className="text-xs font-semibold text-zinc-400 w-20 capitalize">{g.genero}</span>
                     <div className="flex-1 h-2 rounded-full bg-zinc-800 overflow-hidden">
-                      <div
-                        className="h-full rounded-full bg-gradient-to-r from-blue-500 to-purple-500 transition-all duration-500"
-                        style={{ width: `${porcentaje}%` }}
-                      />
+                      <div className="h-full rounded-full bg-gradient-to-r from-blue-500 to-purple-500" style={{ width: `${porcentaje}%` }} />
                     </div>
                     <span className="text-[10px] text-zinc-500 w-8 text-right">{g.peso}</span>
                   </div>

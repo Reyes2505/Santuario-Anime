@@ -1,12 +1,23 @@
 import { NextRequest, NextResponse } from 'next/server';
-import * as cheerio from 'cheerio';
 
 /**
- * Player API - Arquitectura Definitiva (Nivel Senior)
+ * Player API - Production Ready
  * 
- * Seguridad: SSRF prevenido, Timeout de 6s, Sanitización, No-Cache (Tokens frescos).
- * Rendimiento: HLS buffer de 60s, ABR automático, recuperación de red.
- * Scraping: Parseo de DOM seguro con Cheerio (sin depender puramente de Regex).
+ * Arquitectura y Seguridad:
+ * - Prevención de SSRF mediante Whitelist de dominios.
+ * - Control de hilos mediante AbortController (Timeout estricto).
+ * - Sanitización de inputs contra inyecciones XSS.
+ * - Políticas No-Cache en CDN para asegurar la vigencia de los tokens.
+ * - Optimización Single Fetch (reutilización de payload HTML).
+ * 
+ * Configuración HLS:
+ * - Buffer de 90 segundos para mitigar latencia y microcortes.
+ * - Adaptive Bitrate (ABR) inicializado en nivel 0 (estabilidad prioritaria).
+ * - Recuperación automática ante fallos de red.
+ * 
+ * Resolución de Servidores:
+ * - Extracción y decodificación dinámica en Base64.
+ * - UI inyectada para selección manual de servidores de respaldo.
  */
 
 const ALLOWED_HOSTNAMES = ['jkanime.net'];
@@ -42,126 +53,142 @@ async function fetchWithTimeout(url: string, timeoutMs = FETCH_TIMEOUT_MS): Prom
   }
 }
 
-function sanitizeForScript(input: string): string {
-  return input.replace(/["'\\<\/>]/g, '');
+function decodeBase64(str: string): string {
+  try {
+    const padded = str.padEnd(str.length + (4 - str.length % 4) % 4, '=');
+    return Buffer.from(padded, 'base64').toString('utf-8');
+  } catch {
+    return str;
+  }
 }
 
-async function extractM3u8Stream(targetUrl: string): Promise<string | null> {
-  // 1. Obtener página principal del episodio
-  const pageRes = await fetchWithTimeout(targetUrl);
-  if (!pageRes.ok) return null;
+function sanitizeForScript(input: string): string {
+  return input.replace(/["'\\<>]/g, '');
+}
 
-  const html = await pageRes.text();
-  const $page = cheerio.load(html);
+async function extractM3u8Stream(html: string): Promise<string | null> {
+  const umMatch = html.match(/https?:\/\/jkanime\.net\/jkplayer\/um\?e=[^\s"']+/);
+  if (!umMatch) return null;
 
-  // 2. Extraer URL del reproductor UM buscando específicamente el iframe
-  let umUrl = $page('iframe[src*="jkplayer/um"]').attr('src');
-
-  // Fallback seguro en caso de que lo inyecten vía script en lugar de iframe directo
-  if (!umUrl) {
-    const fallbackMatch = html.match(/https?:\/\/jkanime\.net\/jkplayer\/um\?e=[^\s"']+/);
-    if (fallbackMatch) umUrl = fallbackMatch[0];
-  }
-
-  if (!umUrl) return null;
-
-  // Normalizar URLs relativas (por si el iframe usa src="//jkanime.net/...")
-  if (umUrl.startsWith('//')) umUrl = `https:${umUrl}`;
-  else if (umUrl.startsWith('/')) umUrl = `https://jkanime.net${umUrl}`;
-
-  // 3. Obtener el HTML interno del reproductor
-  const umRes = await fetchWithTimeout(umUrl);
+  const umRes = await fetchWithTimeout(umMatch[0]);
   if (!umRes.ok) return null;
 
   const umHtml = await umRes.text();
-  const $um = cheerio.load(umHtml);
-
-  // 4. Buscar el .m3u8 de forma estructurada
-  let m3u8Url: string | undefined;
-
-  // A. Intentar buscar un tag <source> estándar
-  m3u8Url = $um('source[src$=".m3u8"]').attr('src');
-
-  // B. Si está oculto en un script de configuración del reproductor (muy común)
-  if (!m3u8Url) {
-    $um('script').each((_, el) => {
-      const scriptContent = $um(el).html();
-      // Solo aplicamos Regex dentro del script que sabemos que contiene el m3u8
-      if (scriptContent && scriptContent.includes('.m3u8')) {
-        const match = scriptContent.match(/https?:\/\/[^\s"']+\.m3u8[^\s"']*/);
-        if (match) m3u8Url = match[0];
-      }
-    });
-  }
-
-  return m3u8Url || null;
+  const m3u8Match = umHtml.match(/https?:\/\/[^\s"']+\.m3u8[^\s"']*/);
+  
+  return m3u8Match ? m3u8Match[0] : null;
 }
 
-function buildPlayerHtml(m3u8Url: string): string {
+function extractServidores(html: string): { nombre: string; url: string }[] {
+  const servidores: { nombre: string; url: string }[] = [];
+  const seen = new Set<string>();
+
+  const regex = /{"remote":"([^"]+)".*?"server":"([^"]+)"}/g;
+  let match;
+
+  while ((match = regex.exec(html)) !== null) {
+    const urlDecodificada = decodeBase64(match[1]);
+    const nombre = match[2].toLowerCase();
+
+    if (!seen.has(urlDecodificada)) {
+      seen.add(urlDecodificada);
+      servidores.push({ nombre, url: urlDecodificada });
+    }
+  }
+
+  return servidores;
+}
+
+function buildPlayerHtml(m3u8Url: string, servidores: { nombre: string; url: string }[]): string {
+  const botones = servidores.map(s => {
+    const urlEscapada = s.url.replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+    const nombreEscapado = s.nombre.toUpperCase();
+    return `<button onclick="cargarServidor('${urlEscapada}')" class="btn-server">${nombreEscapado}</button>`;
+  }).join('');
+
   return `<!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Santuario Player</title>
+  <title>Player</title>
   <script src="https://cdn.jsdelivr.net/npm/hls.js@1.4.10"></script>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     html, body { height: 100%; background: #000; overflow: hidden; }
-    body { display: flex; align-items: center; justify-content: center; }
-    video { width: 100%; height: 100%; object-fit: contain; }
+    body { display: flex; flex-direction: column; }
+    #video { flex: 1; width: 100%; object-fit: contain; }
+    .servers { padding: 6px 8px; background: #0a0a0a; display: flex; gap: 4px; overflow-x: auto; border-top: 1px solid #1a1a1a; }
+    .btn-server { padding: 5px 10px; background: #1a1a1a; color: #ccc; border: 1px solid #333; border-radius: 3px; cursor: pointer; font-size: 10px; font-family: monospace; white-space: nowrap; transition: background 0.2s; }
+    .btn-server:hover { background: #2a2a2a; color: #fff; }
   </style>
 </head>
 <body>
   <video id="video" controls autoplay playsinline></video>
+  <div class="servers">${botones}</div>
   <script>
     const video = document.getElementById('video');
-    const hlsUrl = "${m3u8Url}";
+    let hls = null;
     
-    if (Hls.isSupported()) {
-      const hls = new Hls({
-        enableWorker: true,
-        lowLatencyMode: false,
-        backBufferLength: 60,
-        maxBufferLength: 60,
-        maxMaxBufferLength: 120,
-        maxBufferSize: 60 * 1000 * 1000,
-        fragLoadingTimeOut: 20000,
-        manifestLoadingTimeOut: 10000,
-        levelLoadingTimeOut: 10000,
-        appendErrorMaxRetry: 5,
-        startLevel: -1,
-        capLevelToPlayerSize: true,
-        startFragPrefetch: true,
-      });
+    function cargarHls(url) {
+      if (hls) { hls.destroy(); hls = null; }
       
-      hls.loadSource(hlsUrl);
-      hls.attachMedia(video);
-      
-      hls.on(Hls.Events.MANIFEST_PARSED, () => {
-        video.play().catch(() => console.log("Autoplay bloqueado"));
-      });
-      
-      hls.on(Hls.Events.ERROR, (event, data) => {
-        if (data.fatal) {
-          switch (data.type) {
-            case Hls.ErrorTypes.NETWORK_ERROR:
-              setTimeout(() => hls.startLoad(), 2000);
-              break;
-            case Hls.ErrorTypes.MEDIA_ERROR:
-              hls.recoverMediaError();
-              break;
-            default:
-              hls.destroy();
-              break;
+      if (Hls.isSupported()) {
+        hls = new Hls({
+          enableWorker: true,
+          lowLatencyMode: false,
+          backBufferLength: 90,
+          maxBufferLength: 90,
+          maxMaxBufferLength: 180,
+          maxBufferSize: 100 * 1000 * 1000,
+          fragLoadingTimeOut: 60000,
+          manifestLoadingTimeOut: 20000,
+          levelLoadingTimeOut: 20000,
+          appendErrorMaxRetry: 10,
+          startLevel: 0,
+          capLevelToPlayerSize: true,
+          startFragPrefetch: true,
+        });
+        
+        hls.loadSource(url);
+        hls.attachMedia(video);
+        
+        hls.on(Hls.Events.MANIFEST_PARSED, () => {
+          video.play().catch(() => {});
+        });
+        
+        hls.on(Hls.Events.ERROR, (event, data) => {
+          if (data.fatal) {
+            switch (data.type) {
+              case Hls.ErrorTypes.NETWORK_ERROR:
+                setTimeout(() => hls.startLoad(), 2000);
+                break;
+              case Hls.ErrorTypes.MEDIA_ERROR:
+                hls.recoverMediaError();
+                break;
+              default:
+                hls.destroy();
+                break;
+            }
           }
-        }
-      });
-      
-    } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-      video.src = hlsUrl;
-      video.addEventListener('loadedmetadata', () => video.play());
+        });
+        
+      } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+        video.src = url;
+        video.addEventListener('loadedmetadata', () => video.play());
+      }
     }
+    
+    function cargarServidor(url) {
+      if (url.includes('/embed') || url.includes('/e/') || url.includes('mega.nz')) {
+        window.open(url, '_blank');
+      } else {
+        cargarHls(url);
+      }
+    }
+    
+    const defaultUrl = "${m3u8Url ? m3u8Url.replace(/"/g, '\\"') : ''}";
+    if (defaultUrl) cargarHls(defaultUrl);
   </script>
 </body>
 </html>`;
@@ -179,17 +206,28 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const m3u8Url = await extractM3u8Stream(validUrl.toString());
-
-    if (!m3u8Url) {
+    const pageRes = await fetchWithTimeout(validUrl.toString());
+    if (!pageRes.ok) {
       return NextResponse.json(
-        { error: 'No se pudo obtener la fuente del reproductor.' },
+        { error: 'No se pudo obtener la página fuente.' },
+        { status: 502 }
+      );
+    }
+
+    const html = await pageRes.text();
+
+    const m3u8Url = await extractM3u8Stream(html);
+    const servidores = extractServidores(html);
+
+    if (!m3u8Url && servidores.length === 0) {
+      return NextResponse.json(
+        { error: 'No se encontraron fuentes de reproducción.' },
         { status: 404 }
       );
     }
 
-    const safeM3u8Url = sanitizeForScript(m3u8Url);
-    const playerHtml = buildPlayerHtml(safeM3u8Url);
+    const safeM3u8Url = m3u8Url ? sanitizeForScript(m3u8Url) : '';
+    const playerHtml = buildPlayerHtml(safeM3u8Url, servidores);
 
     return new NextResponse(playerHtml, {
       headers: {

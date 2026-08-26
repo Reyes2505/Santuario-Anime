@@ -4,63 +4,46 @@ import { createClient } from '@supabase/supabase-js';
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
 const SUPABASE_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
 
-const ROMANIZATION_MAP: Record<string, string> = {
-  '君の名は': 'kimi no na wa',
-  '天気の子': 'tenki no ko',
-  '君': 'kimi', 'の': 'no', '名': 'na', 'は': 'wa',
-  '天気': 'tenki', '子': 'ko',
-};
-
-function toSlug(texto: string): string {
-  let resultado = texto;
-  for (const [japones, romaji] of Object.entries(ROMANIZATION_MAP)) {
-    resultado = resultado.replace(new RegExp(japones, 'g'), romaji);
-  }
-  return resultado.toLowerCase().replace(/[^a-z0-9\s]/g, '').replace(/\s+/g, '-');
-}
-
 export async function GET(request: NextRequest) {
   const nombre = request.nextUrl.searchParams.get('nombre');
-  if (!nombre) return NextResponse.json({ success: false, error: 'Nombre requerido' });
+  
+  if (!nombre) {
+    return NextResponse.json({ success: false, error: 'Nombre requerido' });
+  }
 
   try {
     const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
-    // Extraer slug de URL directa o convertir nombre
+    // Extraer slug de URL o nombre
     let slug = '';
     if (nombre.includes('jkanime.net')) {
       const urlMatch = nombre.match(/jkanime\.net\/([a-z0-9-]+)\/?/);
       slug = urlMatch ? urlMatch[1] : '';
     } else {
-      slug = toSlug(nombre);
+      slug = nombre.toLowerCase().replace(/[^a-z0-9\s]/g, '').replace(/\s+/g, '-');
     }
 
-    console.log('🔍 Slug:', slug);
-
-    if (!slug) {
-      return NextResponse.json({ success: false, error: 'No se pudo determinar el slug' });
-    }
-
-    // Obtener página del anime
+    // 1. Obtener página del anime
     const animeResponse = await fetch(`https://jkanime.net/${slug}/`, {
       headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' }
     });
 
     if (!animeResponse.ok) {
-      return NextResponse.json({ success: false, error: `No se encontró (${slug})` });
+      return NextResponse.json({ success: false, error: 'No se encontró en JK Anime' });
     }
 
     const html = await animeResponse.text();
 
-    // Extraer datos
+    // 2. Extraer CSRF e ID
     const csrfMatch = html.match(/name="csrf-token" content="([^"]+)"/);
     const csrf = csrfMatch ? csrfMatch[1] : '';
 
     const idMatch = html.match(/ajax\/episodes\/(\d+)\//);
     const jkId = idMatch ? parseInt(idMatch[1]) : 0;
 
+    // 3. Extraer metadata
     const tituloMatch = html.match(/<h3>([^<]+)<\/h3>/);
-    const tituloReal = tituloMatch ? tituloMatch[1].trim() : slug.replace(/-/g, ' ');
+    const tituloReal = tituloMatch ? tituloMatch[1].trim() : slug;
     const tituloFinal = tituloReal !== 'Buscado recientemente:' ? tituloReal : slug.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
 
     const sinopsisMatch = html.match(/<p class="scroll">([^<]+)<\/p>/);
@@ -69,7 +52,7 @@ export async function GET(request: NextRequest) {
     const portadaMatch = html.match(/<div class="anime_pic"[^>]*>.*?<img[^>]*src="([^"]+)"/s);
     const portada = portadaMatch ? portadaMatch[1] : '';
 
-    // Verificar si existe
+    // 4. Crear o actualizar anime
     const { data: existente } = await supabase
       .from('animes')
       .select('id')
@@ -92,7 +75,7 @@ export async function GET(request: NextRequest) {
       animeId = animeCreado.id;
     }
 
-    // Crear temporada
+    // 5. Crear temporada
     const temps = await supabase.from('temporadas').select('id').eq('anime_id', animeId).limit(1);
     let temporadaId: string;
 
@@ -107,7 +90,7 @@ export async function GET(request: NextRequest) {
       temporadaId = tempCreada.id;
     }
 
-    // Obtener episodios
+    // 6. Obtener episodios
     const episodios: number[] = [];
     if (jkId > 0 && csrf) {
       let pagina = 1;
@@ -140,7 +123,7 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Guardar episodios
+    // 7. Guardar episodios con URLs
     let guardados = 0;
     for (const epNum of episodios) {
       const existingEp = await supabase

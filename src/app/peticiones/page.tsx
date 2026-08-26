@@ -33,58 +33,29 @@ export default function PeticionesPage() {
     nombre = nombre.replace(/\*/g, '');
     nombre = nombre.replace(/^-\s*/, '');
     nombre = nombre.replace(/^##+\s*/, '');
-    nombre = nombre.trim();
-    return nombre;
+    return nombre.trim();
   };
 
   const detectarAnimesLocal = (texto: string): string[] => {
     const animes: string[] = [];
     
-    // 1. Buscar URLs de JK Anime
-    const urlRegex = /https?:\/\/jkanime\.net\/([a-z0-9-]+)\//g;
+    const urlRegex = /https?:\/\/jkanime\.net\/([a-z0-9-]+)\/?/g;
     let urlMatch;
     while ((urlMatch = urlRegex.exec(texto)) !== null) {
       const slug = urlMatch[1];
-      if (slug && slug.length > 3) {
+      if (slug && slug.length > 3 && !slug.includes('directorio') && !slug.includes('buscar')) {
         const nombre = slug.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
         animes.push(nombre);
       }
     }
     
-    // 2. Buscar patrones [Nombre](url)
-    const markdownRegex = /\[([^\]]+)\]\([^)]+\)/g;
-    let mdMatch;
-    while ((mdMatch = markdownRegex.exec(texto)) !== null) {
-      animes.push(limpiarNombre(mdMatch[1]));
-    }
-    
-    // 3. Buscar líneas con * o -
-    const lineas = texto.split('\n');
-    for (const linea of lineas) {
-      const limpia = limpiarNombre(linea);
-      
-      if (
-        limpia.length > 3 &&
-        !limpia.includes('http') &&
-        !limpia.includes('jkanime') &&
-        !limpia.includes('---') &&
-        !limpia.includes('A día') &&
-        !limpia.includes('catálogo') &&
-        !limpia.includes('Continuaciones') &&
-        !limpia.includes('Nuevas') &&
-        !limpia.includes('Infaltable') &&
-        !limpia.includes('Transmisión') &&
-        !limpia.includes('¿Te interesa') &&
-        !limpia.includes('Detectar') &&
-        !limpia.includes('Peticiones') &&
-        !limpia.includes('🤖') &&
-        !limpia.includes('🔍') &&
-        !limpia.includes('📊') &&
-        !limpia.startsWith('!') &&
-        !limpia.startsWith('=') &&
-        !limpia.includes('El Infaltable')
-      ) {
-        animes.push(limpia);
+    if (animes.length === 0) {
+      const lineas = texto.split('\n');
+      for (const linea of lineas) {
+        const limpia = limpiarNombre(linea);
+        if (limpia.length > 3 && !limpia.includes('http') && !limpia.includes('---')) {
+          animes.push(limpia);
+        }
       }
     }
     
@@ -98,13 +69,11 @@ export default function PeticionesPage() {
     const nombres = detectarAnimesLocal(texto);
     
     if (nombres.length === 0) {
-      setMensaje('⚠️ No se detectaron animes. Prueba con URLs de JK Anime o nombres en líneas separadas.');
+      setMensaje('⚠️ No se detectaron animes.');
       setAnalizando(false);
       return;
     }
 
-    setMensaje(`🔍 Buscando ${nombres.length} animes...`);
-    
     const resultados: AnimeDetectado[] = [];
 
     for (const nombre of nombres) {
@@ -141,44 +110,27 @@ export default function PeticionesPage() {
 
     setResultados(resultados);
     setAnalizando(false);
-    setMensaje('');
   };
 
   const agregarAnime = async (nombre: string) => {
-    setMensaje(`🔄 Agregando "${nombre}"...`);
+    setMensaje(`🔄 Sincronizando "${nombre}"...`);
     
     try {
-      const response = await fetch(`/api/agregar-anime?nombre=${encodeURIComponent(nombre)}`);
+      const slug = nombre.toLowerCase().replace(/\s+/g, '-');
+      const url = `https://jkanime.net/${slug}/`;
+      
+      const response = await fetch(`/api/sync-anime?nombre=${encodeURIComponent(url)}`);
       const data = await response.json();
       
       if (data.success) {
-        setMensaje(`✅ "${nombre}" agregado!`);
+        setMensaje(`✅ "${nombre}" sincronizado! Episodios: ${data.episodios || 0}`);
         analizarPeticion();
       } else {
-        setMensaje(`❌ Error: ${data.error}`);
+        setMensaje(`❌ Error: ${data.error || 'Desconocido'}`);
       }
     } catch (err) {
-      setMensaje(`❌ Error de conexión`);
+      setMensaje('❌ Error de conexión con el bot');
     }
-  };
-
-  const agregarTodos = async () => {
-    const faltantes = resultados.filter(r => !r.enBD);
-    setMensaje(`🔄 Agregando ${faltantes.length} animes...`);
-    
-    let agregados = 0;
-    for (const faltante of faltantes) {
-      try {
-        const response = await fetch(`/api/agregar-anime?nombre=${encodeURIComponent(faltante.nombre)}`);
-        const data = await response.json();
-        if (data.success) agregados++;
-      } catch {
-        // continuar
-      }
-    }
-    
-    setMensaje(`✅ ${agregados}/${faltantes.length} agregados!`);
-    analizarPeticion();
   };
 
   return (
@@ -188,16 +140,16 @@ export default function PeticionesPage() {
           🤖 Peticiones al <span className="text-blue-400">Bot</span>
         </h1>
         <p className="text-xs text-zinc-500 mb-6">
-          Pega URLs de JK Anime, nombres en líneas separadas o artículos completos.
+          Pega URLs de JK Anime o nombres de anime.
         </p>
 
         <div className="mb-6">
           <textarea
             value={texto}
             onChange={(e) => setTexto(e.target.value)}
-            rows={8}
+            rows={6}
             className="w-full rounded-xl border border-zinc-700 bg-zinc-900 p-4 text-sm text-white focus:border-blue-500 focus:outline-none resize-none"
-            placeholder={'Ejemplos:\n\nkimi no na wa https://jkanime.net/kimi-no-na-wa/\n\n* Mushoku Tensei\n* Re:Zero\n* One Piece'}
+            placeholder={'Ejemplos:\n\nhttps://jkanime.net/suzume-no-tojimari/\n\nMushoku Tensei\nRe:Zero'}
           />
           <button
             onClick={analizarPeticion}
@@ -220,19 +172,9 @@ export default function PeticionesPage() {
 
         {resultados.length > 0 && (
           <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <h2 className="text-lg font-bold text-white">
-                📊 Resultados ({resultados.length})
-              </h2>
-              {resultados.some(r => !r.enBD) && (
-                <button
-                  onClick={agregarTodos}
-                  className="rounded-lg bg-green-600 px-4 py-2 text-xs font-bold text-white hover:bg-green-500"
-                >
-                  + Agregar Todos
-                </button>
-              )}
-            </div>
+            <h2 className="text-lg font-bold text-white">
+              📊 Resultados ({resultados.length})
+            </h2>
             
             {resultados.map((resultado, i) => (
               <div

@@ -1,6 +1,10 @@
 #!/usr/bin/env python3
 """
-Bot Ectosimbionte v7 - Senior Level (Optimized & Type-safe)
+Bot Ectosimbionte v8 - Self-Healing
+- Auto-reparación de URLs obsoletas
+- Actualización automática de tokens expirados
+- Batch insert para nuevos episodios
+- Validación y refresco de enlaces
 """
 
 import os
@@ -47,6 +51,7 @@ class EctosimbionteBot:
         self.stats: Dict[str, Any] = {
             'animes_nuevos': 0,
             'episodios_nuevos': 0,
+            'urls_actualizadas': 0,
             'animes_omitidos': 0,
             'm3u8_extraidas': 0,
             'jkplayer_fallbacks': 0,
@@ -231,7 +236,6 @@ class EctosimbionteBot:
         return animes
     
     def obtener_animes_existentes(self) -> Dict[str, Dict[str, Any]]:
-        """Consulta optimizada utilizando Foreign Key Joins y tipado seguro para Pylance"""
         try:
             response = self.supabase.table('animes').select(
                 'id, titulo, temporadas(id, episodios(numero))'
@@ -349,7 +353,7 @@ class EctosimbionteBot:
                 if result.data:
                     anime_id = result.data[0]['id']
                     self.stats['animes_nuevos'] += 1
-                    print(f'  ➕ {titulo[:40]}... → {len(episodios_web)} eps')
+                    print(f'  {titulo[:40]}... -> {len(episodios_web)} eps')
                 else:
                     return
             
@@ -369,28 +373,44 @@ class EctosimbionteBot:
                 else:
                     return
             
-            eps_db_res = self.supabase.table('episodios').select('numero').eq('temporada_id', temporada_id).execute()
-            episodios_existentes: Set[int] = {ep['numero'] for ep in eps_db_res.data} if eps_db_res.data else set()
+            # Self-Healing: Cargar episodios existentes con URLs
+            eps_db_res = self.supabase.table('episodios').select('id, numero, url_stream').eq('temporada_id', temporada_id).execute()
+            
+            episodios_mapa_db = {}
+            if eps_db_res.data:
+                for ep in eps_db_res.data:
+                    episodios_mapa_db[ep['numero']] = {
+                        'id': ep['id'],
+                        'url_stream': ep.get('url_stream', '')
+                    }
             
             nuevos_episodios_batch = []
+            
             for ep_num in episodios_web:
-                if ep_num in episodios_existentes:
-                    continue
-                
                 jkplayer_url = self._get_reproductor_url(slug, ep_num)
                 if not jkplayer_url:
                     continue
                 
                 url_final = self._extract_m3u8(jkplayer_url, cache)
-                nuevos_episodios_batch.append({
-                    'temporada_id': temporada_id,
-                    'numero': ep_num,
-                    'titulo': f'Episodio {ep_num}',
-                    'url_stream': url_final,
-                    'visto': False
-                })
-                self.stats['episodios_nuevos'] += 1
-                time.sleep(0.2)
+                
+                if ep_num in episodios_mapa_db:
+                    db_info = episodios_mapa_db[ep_num]
+                    if not db_info['url_stream'] or db_info['url_stream'] != url_final:
+                        self.supabase.table('episodios').update({
+                            'url_stream': url_final
+                        }).eq('id', db_info['id']).execute()
+                        self.stats['urls_actualizadas'] += 1
+                else:
+                    nuevos_episodios_batch.append({
+                        'temporada_id': temporada_id,
+                        'numero': ep_num,
+                        'titulo': f'Episodio {ep_num}',
+                        'url_stream': url_final,
+                        'visto': False
+                    })
+                    self.stats['episodios_nuevos'] += 1
+                
+                time.sleep(0.1)
             
             if nuevos_episodios_batch:
                 self.supabase.table('episodios').insert(nuevos_episodios_batch).execute()
@@ -405,7 +425,7 @@ class EctosimbionteBot:
             logger.error(f'Error sincronizando {titulo[:40]}: {e}')
     
     def run(self) -> None:
-        logger.info('Bot Ectosimbionte v7 (Optimizado)')
+        logger.info('Bot Ectosimbionte v8 (Self-Healing)')
         logger.info(f'Fecha: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}')
         
         cache = self._load_cache()
@@ -449,8 +469,8 @@ class EctosimbionteBot:
         logger.info(f'{"="*50}')
         logger.info(f'  Animes: {self.stats["animes_nuevos"]}')
         logger.info(f'  Episodios: {self.stats["episodios_nuevos"]}')
+        logger.info(f'  URLs Actualizadas: {self.stats["urls_actualizadas"]}')
         logger.info(f'  M3U8: {self.stats["m3u8_extraidas"]}')
-        logger.info(f'  JK Fallbacks: {self.stats["jkplayer_fallbacks"]}')
         logger.info(f'  Omitidos: {self.stats["animes_omitidos"]}')
         logger.info(f'  Errores: {self.stats["errores"]}')
         logger.info(f'  Tiempo: {tiempo:.1f}s')

@@ -1,14 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 /**
- * Player API - Production Ready
+ * Player API - Production Ready (Unified Episode & Stream Resolver)
  * 
  * Arquitectura y Seguridad:
  * - Prevención de SSRF mediante Whitelist de dominios.
  * - Control de hilos mediante AbortController (Timeout estricto).
  * - Sanitización de inputs contra inyecciones XSS.
  * - Políticas No-Cache en CDN para asegurar la vigencia de los tokens.
- * - Optimización Single Fetch (reutilización de payload HTML).
+ * - Resolución unificada a partir de la URL de la página del episodio.
  * 
  * Configuración HLS:
  * - Buffer de 90 segundos para mitigar latencia y microcortes.
@@ -17,7 +17,7 @@ import { NextRequest, NextResponse } from 'next/server';
  * 
  * Resolución de Servidores:
  * - Extracción mediante RegExp con modificador global y dotAll (/gs).
- * - Decodificación dinámica en Base64.
+ * - Decodificación dinámica en Base64 de los 10 servidores alternativos.
  * - UI inyectada para selección manual de servidores de respaldo.
  */
 

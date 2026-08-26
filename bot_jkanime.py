@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """
-Bot Ectosimbionte v8 - Self-Healing
-- Auto-reparación de URLs obsoletas
-- Actualización automática de tokens expirados
+Bot Ectosimbionte v9 - URL de Página de Episodio
+- Almacena URLs estables de páginas de episodios
+- Self-healing para URLs obsoletas
 - Batch insert para nuevos episodios
-- Validación y refresco de enlaces
+- El proxy extrae M3U8 fresco en cada request
 """
 
 import os
@@ -53,8 +53,6 @@ class EctosimbionteBot:
             'episodios_nuevos': 0,
             'urls_actualizadas': 0,
             'animes_omitidos': 0,
-            'm3u8_extraidas': 0,
-            'jkplayer_fallbacks': 0,
             'errores': 0,
             'tiempo_inicio': datetime.now()
         }
@@ -82,7 +80,6 @@ class EctosimbionteBot:
         default: Dict[str, Any] = {
             'animes_procesados': {},
             'popularidad': {},
-            'm3u8_cache': {},
             'ultima_ejecucion': None
         }
         
@@ -131,55 +128,6 @@ class EctosimbionteBot:
                 time.sleep((2 ** intento) + random.uniform(0.2, 0.8))
         
         return None
-    
-    def _extract_m3u8(self, jkplayer_url: str, cache: Dict[str, Any]) -> str:
-        m3u8_cache: Dict[str, Any] = cache.get('m3u8_cache', {})
-        if jkplayer_url in m3u8_cache:
-            cached = m3u8_cache[jkplayer_url]
-            fecha = datetime.fromisoformat(cached.get('fecha', datetime.now().isoformat()))
-            if datetime.now() - fecha < timedelta(hours=6):
-                m3u8_cached: str = cached.get('m3u8', '')
-                if m3u8_cached:
-                    return m3u8_cached
-        
-        response = self._request_with_retry('GET', jkplayer_url)
-        if not response:
-            return jkplayer_url
-        
-        m3u8_match = re.search(
-            r'https?://[^\s"\'<>]+\.m3u8[^\s"\'<>]*',
-            response.text
-        )
-        
-        if m3u8_match:
-            m3u8_url: str = m3u8_match.group(0)
-            m3u8_cache[jkplayer_url] = {
-                'm3u8': m3u8_url,
-                'fecha': datetime.now().isoformat()
-            }
-            cache['m3u8_cache'] = m3u8_cache
-            self.stats['m3u8_extraidas'] += 1
-            return m3u8_url
-        
-        self.stats['jkplayer_fallbacks'] += 1
-        return jkplayer_url
-    
-    def _get_reproductor_url(self, slug: str, ep_num: int) -> str:
-        ep_url = f"{self.base_url}/{slug}/{ep_num}/"
-        response = self._request_with_retry('GET', ep_url)
-        if not response:
-            return ''
-        
-        soup = BeautifulSoup(response.content, 'html.parser')
-        for script in soup.find_all('script'):
-            if script.string:
-                match = re.search(
-                    r'https?://jkanime\.net/jkplayer/um\?e=[^\s"\']+',
-                    script.string
-                )
-                if match:
-                    return match.group(0)
-        return ''
     
     def _get_episodios(self, jk_id: int, csrf: str) -> List[int]:
         episodios: List[int] = []
@@ -373,7 +321,6 @@ class EctosimbionteBot:
                 else:
                     return
             
-            # Self-Healing: Cargar episodios existentes con URLs
             eps_db_res = self.supabase.table('episodios').select('id, numero, url_stream').eq('temporada_id', temporada_id).execute()
             
             episodios_mapa_db = {}
@@ -387,17 +334,14 @@ class EctosimbionteBot:
             nuevos_episodios_batch = []
             
             for ep_num in episodios_web:
-                jkplayer_url = self._get_reproductor_url(slug, ep_num)
-                if not jkplayer_url:
-                    continue
-                
-                url_final = self._extract_m3u8(jkplayer_url, cache)
+                # Construir la URL de la página del episodio
+                url_episodio_pagina = f"{self.base_url}/{slug}/{ep_num}/"
                 
                 if ep_num in episodios_mapa_db:
                     db_info = episodios_mapa_db[ep_num]
-                    if not db_info['url_stream'] or db_info['url_stream'] != url_final:
+                    if not db_info['url_stream'] or db_info['url_stream'] != url_episodio_pagina:
                         self.supabase.table('episodios').update({
-                            'url_stream': url_final
+                            'url_stream': url_episodio_pagina
                         }).eq('id', db_info['id']).execute()
                         self.stats['urls_actualizadas'] += 1
                 else:
@@ -405,12 +349,10 @@ class EctosimbionteBot:
                         'temporada_id': temporada_id,
                         'numero': ep_num,
                         'titulo': f'Episodio {ep_num}',
-                        'url_stream': url_final,
+                        'url_stream': url_episodio_pagina,
                         'visto': False
                     })
                     self.stats['episodios_nuevos'] += 1
-                
-                time.sleep(0.1)
             
             if nuevos_episodios_batch:
                 self.supabase.table('episodios').insert(nuevos_episodios_batch).execute()
@@ -425,7 +367,7 @@ class EctosimbionteBot:
             logger.error(f'Error sincronizando {titulo[:40]}: {e}')
     
     def run(self) -> None:
-        logger.info('Bot Ectosimbionte v8 (Self-Healing)')
+        logger.info('Bot Ectosimbionte v9 (URL de Página)')
         logger.info(f'Fecha: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}')
         
         cache = self._load_cache()
@@ -470,7 +412,6 @@ class EctosimbionteBot:
         logger.info(f'  Animes: {self.stats["animes_nuevos"]}')
         logger.info(f'  Episodios: {self.stats["episodios_nuevos"]}')
         logger.info(f'  URLs Actualizadas: {self.stats["urls_actualizadas"]}')
-        logger.info(f'  M3U8: {self.stats["m3u8_extraidas"]}')
         logger.info(f'  Omitidos: {self.stats["animes_omitidos"]}')
         logger.info(f'  Errores: {self.stats["errores"]}')
         logger.info(f'  Tiempo: {tiempo:.1f}s')

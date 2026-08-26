@@ -1,348 +1,84 @@
 {
   "animes_procesados": {
     "Shiguang Dailiren III": {
-      "fecha": "2026-08-26T16:47:25.819190",
+      "fecha": "2026-08-26T16:54:58.703167",
       "total_episodios": 3
     },
     "You Shou Yan 6th Season": {
-      "fecha": "2026-08-26T16:47:28.196938",
+      "fecha": "2026-08-26T16:55:05.803496",
       "total_episodios": 3
     },
     "Jiyi Guanli Ju (2026)": {
-      "fecha": "2026-08-26T16:47:30.734271",
+      "fecha": "2026-08-26T16:55:14.297993",
       "total_episodios": 4
     },
     "Bleach: Sennen Kessen-hen - Kashin-tan": {
-      "fecha": "2026-08-26T16:47:33.191978",
+      "fecha": "2026-08-26T16:55:23.722727",
       "total_episodios": 5
-    },
-    "Yami Shibai 17": {
-      "fecha": "2026-08-25T13:46:31.405911",
-      "total_episodios": 0
-    },
-    "Futsutsuka na Akujo dewa Gozaimasu ga: Suuguu Chouso Torikae Den": {
-      "fecha": "2026-08-25T13:46:33.864430",
-      "total_episodios": 7
-    },
-    "Hanaori-san wa Tensei shitemo Kenka ga Shitai": {
-      "fecha": "2026-08-25T13:46:36.321916",
-      "total_episodios": 7
-    },
-    "Ryoumin 0-nin Start no Henkyou Ryoushu-sama": {
-      "fecha": "2026-08-25T13:46:38.774510",
-      "total_episodios": 8
-    },
-    "Dogulwang": {
-      "fecha": "2026-08-25T13:46:46.128640",
-      "total_episodios": 7
-    },
-    "Mebius Dust": {
-      "fecha": "2026-08-25T13:46:48.610072",
-      "total_episodios": 7
-    },
-    "Thunder 3": {
-      "fecha": "2026-08-25T13:46:59.199687",
-      "total_episodios": 7
-    },
-    "Youjo Senki II": {
-      "fecha": "2026-08-25T13:47:01.716695",
-      "total_episodios": 7
-    },
-    "Otome Game Sekai wa Mob ni Kibishii Sekai desu 2": {
-      "fecha": "2026-08-25T13:47:04.174902",
-      "total_episodios": 7
-    },
-    "Clevatess II: Majuu no Ou to Itsuwari no Yuusha Denshou": {
-      "fecha": "2026-08-25T13:47:06.627881",
-      "total_episodios": 7
-    },
-    "Katainaka no Ossan, Kensei ni Naru II": {
-      "fecha": "2026-08-25T13:47:12.338417",
-      "total_episodios": 7
-    },
-    "Super no Ura de Yani Suu Futari": {
-      "fecha": "2026-08-25T13:47:47.875833",
-      "total_episodios": 19
-    },
-    "Nige Jouzu no Wakagimi 2nd Season": {
-      "fecha": "2026-08-25T13:48:00.267228",
-      "total_episodios": 6
-    },
-    "Oni no Hanayome": {
-      "fecha": "2026-08-25T13:48:15.934024",
-      "total_episodios": 8
-    },
-    "Kore Kaite Shine": {
-      "fecha": "2026-08-25T13:48:30.879515",
-      "total_episodios": 7
-    },
-    "Ibitte Konai Gibo to Gishi": {
-      "fecha": "2026-08-25T13:48:45.528334",
-      "total_episodios": 7
-    },
-    "Bungou Stray Dogs Wan! 2": {
-      "fecha": "2026-08-25T13:49:01.298017",
-      "total_episodios": 8
-    },
-    "BanG Dream! Yume\u221eMita": {
-      "fecha": "2026-08-25T13:49:22.400242",
-      "total_episodios": 10
-    },
-    "Suterare Seijo no Isekai Gohan Tabi: Kakure Skill de Camping Car wo Shoukan shimashita": {
-      "fecha": "2026-08-25T13:49:38.059927",
-      "total_episodios": 8
-    },
-    "Heroine? Seijo? Iie, All Works Maid desu (Hokori)!": {
-      "fecha": "2026-08-25T13:49:55.262294",
-      "total_episodios": 9
-    },
-    "Reiwa no Dara-san": {
-      "fecha": "2026-08-25T13:50:10.929832",
-      "total_episodios": 8
-    },
-    "Meitantei Conan: Hanamaru na Answer": {
-      "fecha": "2026-08-25T14:08:37.881537",
-      "total_episodios": 1
-    },
-    "Wan Ren Zhi Shang": {
-      "fecha": "2026-08-25T14:08:57.030321",
-      "total_episodios": 10
-    },
-    "Isekai no Sata wa Shachiku Shidai: Omoi wo Hasemashita": {
-      "fecha": "2026-08-25T14:09:01.535370",
-      "total_episodios": 1
-    },
-    "Bai Ri Cheng Wang": {
-      "fecha": "2026-08-25T14:09:36.966530",
-      "total_episodios": 19
-    },
-    "Hanazakari no Kimitachi e 2nd Season": {
-      "fecha": "2026-08-25T14:09:54.374658",
-      "total_episodios": 9
-    },
-    "Baki-dou Part 2": {
-      "fecha": "2026-08-25T14:10:17.023248",
-      "total_episodios": 12
-    },
-    "Tefuda ga Oome no Victoria": {
-      "fecha": "2026-08-25T14:10:32.878083",
-      "total_episodios": 8
-    },
-    "Kimi ga Shinu made Koi wo Shitai": {
-      "fecha": "2026-08-25T14:10:48.647137",
-      "total_episodios": 8
-    },
-    "Koukaku Kidoutai (TV)": {
-      "fecha": "2026-08-25T14:11:04.314511",
-      "total_episodios": 8
-    },
-    "Tai-Ari deshita.: Ojousama wa Kakutou Game nante Shinai": {
-      "fecha": "2026-08-25T14:11:20.289156",
-      "total_episodios": 8
-    },
-    "Onegai AiPri": {
-      "fecha": "2026-08-25T23:06:19.804772",
-      "total_episodios": 20
-    },
-    "Kami no Shizuku": {
-      "fecha": "2026-08-25T23:06:59.019368",
-      "total_episodios": 20
-    },
-    "Ushiro no Shoumen Kamui-san": {
-      "fecha": "2026-08-25T23:07:15.817553",
-      "total_episodios": 8
-    },
-    "Tsuihou sareta Tensei Juukishi wa Game Chishiki de Musou suru": {
-      "fecha": "2026-08-25T23:07:32.816943",
-      "total_episodios": 8
-    },
-    "Yani Neko": {
-      "fecha": "2026-08-25T23:07:49.405862",
-      "total_episodios": 8
-    },
-    "Otome Kaijuu Caram\u00e9liser": {
-      "fecha": "2026-08-25T23:08:06.200068",
-      "total_episodios": 8
-    },
-    "Lv999 no Murabito": {
-      "fecha": "2026-08-25T23:08:24.632746",
-      "total_episodios": 9
-    },
-    "Rakudai Kenja no Gakuin Musou: Nidome no Tensei, S-Rank Cheat Majutsushi Boukenroku": {
-      "fecha": "2026-08-25T23:08:43.167113",
-      "total_episodios": 9
-    },
-    "Grand Blue Season 3": {
-      "fecha": "2026-08-25T23:08:59.756374",
-      "total_episodios": 8
-    },
-    "Tenkou-saki no Seiso Karen na Bishoujo ga, Mukashi Danshi to Omotte Issho ni Asonda Osananajimi Datta Ken": {
-      "fecha": "2026-08-25T23:09:16.760416",
-      "total_episodios": 8
-    },
-    "Aishiteru Game wo Owarasetai": {
-      "fecha": "2026-08-26T16:47:54.696357",
-      "total_episodios": 12
-    },
-    "Tsue to Tsurugi no Wistoria Season 2": {
-      "fecha": "2026-08-26T16:48:16.400568",
-      "total_episodios": 12
     }
   },
-  "ultima_ejecucion": "2026-08-26T16:48:16.900846",
-  "popularidad": {
-    "Tefuda ga Oome no Victoria": 0,
-    "Kimi ga Shinu made Koi wo Shitai": 0,
-    "Koukaku Kidoutai (TV)": 0,
-    "Tai-Ari deshita.: Ojousama wa Kakutou Game nante Shinai": 0,
-    "Yoroi Shin Den Samurai Troopers Part 2": 0,
-    "Mushoku Tensei III: Isekai Ittara Honki Dasu": 0,
-    "Gaikotsu Kishi-sama, Tadaima Isekai e Odekakechuu II": 0,
-    "Sayonara Lara": 0,
-    "Koko wa Ore ni Makasete Saki ni Ike to Itte kara 10-nen ga Tattara Densetsu ni Natteita.": 0,
-    "Ushiro no Shoumen Kamui-san": 0,
-    "Tsuihou sareta Tensei Juukishi wa Game Chishiki de Musou suru": 0,
-    "Yani Neko": 0,
-    "Otome Kaijuu Caram\u00e9liser": 0,
-    "Bai Ri Cheng Wang": 74.56,
-    "Lv999 no Murabito": 0,
-    "Rakudai Kenja no Gakuin Musou: Nidome no Tensei, S-Rank Cheat Majutsushi Boukenroku": 0,
-    "Hanazakari no Kimitachi e 2nd Season": 40.989999999999995,
-    "Grand Blue Season 3": 0,
-    "Tenkou-saki no Seiso Karen na Bishoujo ga, Mukashi Danshi to Omotte Issho ni Asonda Osananajimi Datta Ken": 0,
-    "Saikyou Degarashi Ouji no Anyaku Teii Arasoi": 0,
-    "Guimi Zhi Zhu Tebie Pian: Liewu": 0,
-    "Baki-dou Part 2": 33.11,
-    "Biao Ren Er": 0,
-    "Wan Ren Zhi Shang": 89.15,
-    "Meitantei Conan: Hanamaru na Answer": 93.03999999999999,
-    "Isekai no Sata wa Shachiku Shidai: Omoi wo Hasemashita": 80.99000000000001,
-    "Quanzhi Fashi VII": 0,
-    "Love Live! Hasunosora Jogakuin School Idol Club Movie: Bloom Garden Party": 0,
-    "Fei Ren Zai 3rd Season Part 2": 0,
-    "Boku no Hero Academia: More": 0,
-    "Iya na Kao sare nagara Opantsu Misete Moraitai Returns": 0,
-    "Kai Pai La! Guaishou Da Dianying": 0,
-    "Aishiteru Game wo Owarasetai": 0,
-    "Tsue to Tsurugi no Wistoria Season 2": 0,
-    "Yozakura-san Chi no Daisakusen 2nd Season": 0,
-    "Ichijouma Mankitsugurashi!": 0,
-    "Yowayowa Sensei": 0,
-    "Kamiina Botan, Yoeru Sugata wa Yuri no Hana": 0,
-    "Kill Ao": 0,
-    "Hokuto no Ken: Fist of the North Star": 0,
-    "Mujikaku Seijo wa Kyou mo Muishiki ni Chikara wo Tare Nagasu": 0,
-    "World Is Dancing": 0,
-    "Kuroneko to Majo no Kyoushitsu": 0,
-    "Kami no Shizuku": 48.089999999999996,
-    "Re:Zero kara Hajimeru Isekai Seikatsu 4th Season": 0,
-    "Liar Game": 0,
-    "Onegai AiPri": 97.66000000000001,
-    "Honzuki no Gekokujou: Shisho ni Naru Tame ni wa Shudan wo Erandeiraremasen - Ryoushu no Youjo": 0,
-    "Mairimashita! Iruma-kun 4th Season": 0,
-    "Yomi no Tsugai": 0,
-    "Mao": 0,
-    "Awajima Hyakkei": 0,
-    "Himekishi wa Barbaroi no Yome": 0,
-    "Kanojo, Okarishimasu 5th Season": 0,
-    "Otaku ni Yasashii Gal wa Inai!?": 0
-  },
+  "popularidad": {},
   "m3u8_cache": {
-    "https://jkanime.net/jkplayer/um?e=QUt0Q1lmZzNiTWpIZGlrUFgxWmRCV09TSHNzdkoycUlkUEJpMHhTTTVNdmVRZS8vZjNlZnV2RHMzTXgrMnZGZGIvS1dkTzAzVzFOM3JvN05NcmZyY0VhZWp5cTRwdEpMQWxUb2pDNDdGV3M9OjpbxjW098tWSvage31jhwuy&t=3c90dd0d57e78981bcd53869b467f421&op=NzI1NDI=": {
-      "m3u8": "https://nika.playmudos.com/NjhFYk1UZGZrK0w2Z3pacjZWTUszQU9QazB5TmVDcElLSVdpSVRuSFFhSVFUdWRleXZHaEhXNWw1ZjJKY0dLTQ.m3u8?st=0Pytcucj-Oy_6U2oY2RD7w&e=1787791658",
-      "fecha": "2026-08-26T16:47:38.931284"
+    "https://jkanime.net/jkplayer/um?e=SGxsYlMwN3E5TUlIOUxaampDQ3NiMGFybFVWdGZ4VkdDZGdKNlkyV3B3bytXUDVlOXVYb2tERG1lWTJ6MmRWS3JuNWtWTlJ5RHVWakx3TVF6bCtDaElSc2ZndFZpZHZqaEVMUWVQYUJrc0U9OjrJtIKd3czSKPxoiZIaFZbB&t=ea296d764f66c92bab9b0b32db849f5c&op=NzYzOTU=": {
+      "m3u8": "https://nika.playmudos.com/bGRNRGpsSFlFcEhSQVZvNVZQcmRkVys1d1Exbmgzbk9NZGhjOXNMR1ZFcDZEdnNhU2FNeTd0OTk4Qk1uWkV0dw.m3u8?st=Y9lDYS5xvnKfhYTDkrcbBg&e=1787792095",
+      "fecha": "2026-08-26T16:54:55.565661"
     },
-    "https://jkanime.net/jkplayer/um?e=LytwODcrd092QlNQYWdCWDBoWUxMcEhZcFhaVFBpazJzSEErT0NaeGFraWlESVlpVTBuSVNDK1ZrTmFBNDg3STdENjB0ZzVnaEduaG5uVjV5SGNpWjBmS2N1cllhbDhZS2JvRko0eGpyem89OjrHFOvA._LsWRNWZnNMPy_.&t=c857c3d3e3bfd5b597cc6139bff2a698&op=NzI2NzI=": {
-      "m3u8": "https://nika.playmudos.com/bGV2Rm81aTdrWkszU0Ntc09mY0k4Vy9ZYlVRMU51czJtRkNuVkNtUy9RY0FCS3R2aDZleURDWUZxYmtkeFVnNA.m3u8?st=cDSsmQMY8zyteI38H4zIEg&e=1787791660",
-      "fecha": "2026-08-26T16:47:40.257328"
+    "https://jkanime.net/jkplayer/um?e=OFloQS9oaVl0TzB2VW52eC9aQ3BOdDhVcWZReEh0M3NHajM1MkdTVWdtb3pyTm5UZHpwUXRpclNzVFVlYll0Njk3UlZ4NUNURFhQWUhkck5MNTR3aFZ1RW0zRWpZbEJNYmdYS0JMTXdBWTA9Ojp6bGI2f2YOLOfXzMpOAGtZ&t=77664cdb3a674a8479ebe131e52bade6&op=NzYzOTY=": {
+      "m3u8": "https://nika.playmudos.com/bGRNRGpsSFlFcEhSQVZvNVZQcmRkVys1d1Exbmgzbk9NZGhjOXNMR1ZFcTdZYkM0eXExalJlbEU4MUM2RHhvVg.m3u8?st=M4muyikd-SF7zcb9Olh1dw&e=1787792096",
+      "fecha": "2026-08-26T16:54:56.998376"
     },
-    "https://jkanime.net/jkplayer/um?e=SWhDNlc5dnlBZHdvcnJ2V213NzNFb1dQWUZ1RzJIc0liWG9Ob3pxMjlGQzFiUjVUV1BNV25hdlZHUlVIWk1NbnpjN0pwRTNDNXdaTERsYmdJWXNBNXZ6ZFI5T21HcmtRVHdMWDUrR2N4LzA9OjoSK.5NQWAfY.Bk7Pi.BRzF&t=06f16af4905dfd5474e535de2282e4f0&op=NzI3Nzk=": {
-      "m3u8": "https://nika.playmudos.com/RDRralY1Yy9OVmtpWGtaZktxMGJXRU40MHFlSHBHaEZKLzY2TzdIRDNWbGg0c3dGS0o0enFmS0ZCdG1UTk51dg.m3u8?st=q9lYrKvDn7TxybNZjinbIQ&e=1787791661",
-      "fecha": "2026-08-26T16:47:42.169519"
+    "https://jkanime.net/jkplayer/um?e=Tm1GU2xDZ3FCbVRkanZpYUlCWHlHZXk1aDd6VHUveEdwTU5kcmhkV1R1cTdaTEcxbVNnSmcvQUhwRCtYcUZFbXNHTUtUUUlDR0ZlR2tJamFkWTdYemdhYXpiTHFodmxkVU0wVGRHS2xTME09OjoI2rh5Ia.U4yyIXj3T3QxJ&t=73f1f5df95e2099a8ebeada67cf6e4fb&op=NzY2NDY=": {
+      "m3u8": "https://nika.playmudos.com/L2Z1U2tIQjV6Q1VKNXJUb2VuT2hJdDFiano1N1RScVE5ZldlTDZmb2hNdjRLM0lCS1YxVG1vKzJTQXZIYlFYVQ.m3u8?st=RWC8JN3rOMTdSTu-aJPzOg&e=1787792098",
+      "fecha": "2026-08-26T16:54:58.372379"
     },
-    "https://jkanime.net/jkplayer/um?e=cC81SVZPMkNxM3Z0RU12NjN3UFovNVV4dy95ZEQ5RUIrazlJN1FLSlQ2Tlc2MVM4UHQya2xUaCtzdGZ1NGVtek9TRVBucDJYdGZiMXFsdEduZlRvd3dCVkc5emtrUUJCNlE4QlBsL1BQdDQ9OjqObiH7UIlEMjs.GKM6355B&t=8c749b713a05e8c8f9c7cc71fc6f8d2f&op=NzI5NjE=": {
-      "m3u8": "https://nika.playmudos.com/WkFDQnJrZ3BJWnFMWFJxcUpsdjVDVENwZmFrS2gvaXZNRVZoRTd2NXV4NE9IWmw4U01nQ1ZDTG9XOHc4QU9pVDJubUFLUXdKYitneTZmYUhvS1NHM2c9PQ.m3u8?st=0Xkl4r9MYYuU0nwJztvXtA&e=1787791663",
-      "fecha": "2026-08-26T16:47:43.433187"
+    "https://jkanime.net/jkplayer/um?e=bkE4Ym5vK2RjNzVGQ2dSOWxhZjlDczluK3ovS2xwU3hzam9nTVp4M0FsYy9Ma2xFNG5IYzFmUTY3bnE5S004NU5zOGg3ai9pL1hYZitWL05ZSzRYUlNDR05oclVoQld4RjM5c1NLZVl6amM9OjqdPmwByjmEBMlpiVxSTnX1&t=0e4b70b76655f8008fa4933d29838652&op=NzY0MjA=": {
+      "m3u8": "https://nika.playmudos.com/WnR4V3YyU3FIRnlLUWgvNHZiUklkRnUxZ0pnMk5rYkhqUFlOTm44cnlYS25LTUZuc2R2SEdnVWhjL0hJNDRMQQ.m3u8?st=cXKcpvgD0Nn2IUbQqaCEPw&e=1787792101",
+      "fecha": "2026-08-26T16:55:02.118978"
     },
-    "https://jkanime.net/jkplayer/um?e=TGtTTFJzRjlmZk5VL0xDT2hoSlVCWWVuSHBvaXQ5azlqMnl4dXdzV0l1aHR3Nmp2Rk1kQ1ZSdUMzTU1oQ0JTbFIyT2tXKzAvV1V2a2pqdHJJQkdvVVYyY1BmemJTa29Hb2crUVpydnQvTlE9OjoJXZUdXAbqTY4dUf3xTses&t=6eee8703957cf7dc29c80812ec1e0cc0&op=NzMxODY=": {
-      "m3u8": "https://nika.playmudos.com/NllRMEFhK1U2K2xxV0lHYm9ZZko5QkRBRGZpU2NuUGJ0ZllQTHhRbHBITTYxVWhETFJPK3RrUFJEZSsyTStKVA.m3u8?st=1t4WgA_CLiw2VybqQ9gDXQ&e=1787791664",
-      "fecha": "2026-08-26T16:47:44.661146"
+    "https://jkanime.net/jkplayer/um?e=Y3BQbkJYQldtQmIxWERLRGZ4d3V3a0JKOGwxM1BpaFRvSi90U053VG04YjhQb0xpblN0OVg4a0ZmZWpjampPalBGTFdqZTE5cjA5TnluYkVwOGw5ZEkvQmYvRkZja2Rid1hFcEx3M3lBemc9OjptPHYu_EnvJSsV79nwy.Jl&t=e711f0cda229bc4ce4eb3792a22b6f56&op=NzY0MjE=": {
+      "m3u8": "https://nika.playmudos.com/WnR4V3YyU3FIRnlLUWgvNHZiUklkRnUxZ0pnMk5rYkhqUFlOTm44cnlYSk1USitBZ3ZMM1ZGTDVraWFsRmVxNQ.m3u8?st=IlZiT-bTua1MdpS8qwXMQg&e=1787792103",
+      "fecha": "2026-08-26T16:55:03.862570"
     },
-    "https://jkanime.net/jkplayer/um?e=NjdEakwwNmZ4UVNJUFFOWWlFanR2NE43dmd3OWVWUkxYQ3BpZW9MNWNsV0lTYWg0SjBHYnIzV29PaVRia3FOZ3hRMWNCaVh5UGZpVHBEYkhkR2F0OVVmL2V2bUxjSlNWeGk1WXhJTzRHUUk9OjoErQJe9VNk2J0OWeCLds0H&t=34db3a7d98880d489b77198c692ae961&op=NzMyODY=": {
-      "m3u8": "https://nika.playmudos.com/YlhHbURCY2ErY2U0emF3Q2YzaXFucEtMT2xjbjNKZkFHQVVSeTAwMlZJN1BMdndIMHFaSnB5TUc5aHNDS0xjazZ1Unk0RkJPMnFsUXljcmRlNkFpaXc9PQ.m3u8?st=KDX6fNgMGBFKvvx_A7zQkA&e=1787791665",
-      "fecha": "2026-08-26T16:47:45.897915"
+    "https://jkanime.net/jkplayer/um?e=L3lsMFR1S2hmZUtzRTVSS2FhbHUxZUJtYk1QRXhHSGk1UTlpN0RTSWwxZjIyQmppZ3pKNC90WkxBV1MwV1ZyZzFScEEweHdyWC9aMGNmcnRNb1hrdkVienB3KzhxazA4c05wRWI3M3lvVkU9Ojq1WgHyZmvdsp8P3XW3ztSw&t=406e82a8b460adaec891bda94cb17b56&op=NzY0MjI=": {
+      "m3u8": "https://nika.playmudos.com/WnR4V3YyU3FIRnlLUWgvNHZiUklkRnUxZ0pnMk5rYkhqUFlOTm44cnlYS0NoRGwxZy85SUdTS24xWEVDZit6UA.m3u8?st=FFKOzNJijXmdHunJXnw-Gg&e=1787792105",
+      "fecha": "2026-08-26T16:55:05.395722"
     },
-    "https://jkanime.net/jkplayer/um?e=OHJ1dVV0alFlSUVaOURqNjdMdTlUNkJhc2VZblU0aVJlNkpWc2JrcFRmK1lGS085L0JpcmdDSzVnd0hSdFNXajZIV1lEM0MxNG9yQkU4QWl4NHVUZ1pyV0tIN3Z0eExnOHBEb0pQWmhENEU9Ojopq2TypkcHHCkjAiTniYKF&t=7aaeb427b4b896fb09cb273f6b981053&op=NzMzOTE=": {
-      "m3u8": "https://nika.playmudos.com/bStxdENTa0JqMFFyYlBDWTlETGFQM2VlV2I4NWkzTGtOT2pLbmJFU292eEtKb3g1eTVRV3BjeGFZclZnMFYyZjFyNU4yZGN5UE1CUnRQQUJJL0U5aVE9PQ.m3u8?st=IBSzYHf-ZtnixSugGAYOeA&e=1787791666",
-      "fecha": "2026-08-26T16:47:47.114105"
+    "https://jkanime.net/jkplayer/um?e=TkxlMEY4YWowUXh6WGdseDJIazB1ZFZianlZWHZyaks0LzllcG1vazgvNGJ4WWhhMWhuc2tONnNxN3RjQjVRVHgxSlMzcW5MYkMvc2xrL0xpa1NVdE9vQlVOUVdma1N6L1o0MkR3a05CSXc9Ojp5bwxAR2KyV9b5zJn0iF.m&t=7338aa61ad97e2bfbf844531754ba886&op=NzYwOTI=": {
+      "m3u8": "https://nika.playmudos.com/MjAwSEpDRnNsdnlBV2ltQTB2QktVTklQTkJ5bGNubFIxcDdOWk0yUi9SVWxkZnhYQnR0OURsT1pDRlJBcXNrNw.m3u8?st=dkY6XU9h1GCi2cMhoD65zQ&e=1787792108",
+      "fecha": "2026-08-26T16:55:09.184098"
     },
-    "https://jkanime.net/jkplayer/um?e=VDBDVHBteEZlVFZhazM2YytNWVovK0haY1kxK2QwdmFBZXVVWGRPNFdBb09xTTFRbmR4bW5jaFhIeWkvUXFiL29JUGJ2ZGhnbGtxYXpPc3k2MW11dVMyS0dER0RjMHorVUErWVczNEtkM0k9Ojr_K.ZiaE4V4gY4RcgSq1wo&t=d0cadc68d529983347db64dc1cf81bc6&op=NzM5MzU=": {
-      "m3u8": "https://nika.playmudos.com/NllRMEFhK1U2K2xxV0lHYm9ZZko5RlZyeGdoVkpXektwb3BNWFpGc3FBdm9WUHRvaXMvY1N0a1FXdzZkRTVRellCNWtBOXJtNHpyZHJhMG9Cb1ZiSVE9PQ.m3u8?st=e10kArnEXmajoTiG3o3r6A&e=1787791668",
-      "fecha": "2026-08-26T16:47:48.344172"
+    "https://jkanime.net/jkplayer/um?e=Qm0wNyt1SjhwK2JrdWc4OS9jQXJNcS9pMnVsTDdWcEFQeVBpYlYvM3RpS2lZM0FrMElRTm01Z3hWbUZBWGpaQS9Id09iak4xMmxJT2dNQXVaOHdQUE5SZVdwZmFqc29JTTlXU1hLd2llcTg9Ojpkzd7LeS4U1phsIZDZNJPU&t=0aeea1095f8f040f735206bde0fa9816&op=NzYwOTM=": {
+      "m3u8": "https://nika.playmudos.com/MjAwSEpDRnNsdnlBV2ltQTB2QktVTklQTkJ5bGNubFIxcDdOWk0yUi9SVXVCcHc1OUZNVDBFV2RVMXZKNlFJbg.m3u8?st=ynGqyV7kI9jm3zXCnBT6mQ&e=1787792110",
+      "fecha": "2026-08-26T16:55:10.617639"
     },
-    "https://jkanime.net/jkplayer/um?e=cjRReW1aRUtrcDRHNlN4ZDZhZStqeW5pcE0wbWR2T3dWRjhvd1JINGZOSHpLTlFmczgrbUZwZGxzUjdxVi8waUJXeGdmSUZBQmZZSm1HdjZkRm9LTjIwMS9xQXZKZjUxaXRkbGFKTFFVZFE9OjrO60QnNXaY.hGbyCtYJQ5F&t=3be6405271294e92f191879bb5b6f55c&op=NzQyMTc=": {
-      "m3u8": "https://nika.playmudos.com/SHVyb1BwTlBYNDNSaG5Hc0xldjhLVHFnOG5qQTJkR0JqYWE5OWk4MStDQWlUZVIzRHdSZ3VWODVUaTlZNFpiQw.m3u8?st=QwUeEeOilnROgO-cThkYOg&e=1787791669",
-      "fecha": "2026-08-26T16:47:49.794340"
+    "https://jkanime.net/jkplayer/um?e=RmR0eXJheEtId0ljYTdwSVF0d2pES1o1RUJySTRxNDg5T0x1WHdQbHpSNG5RdDRJMEd1MmlvbXBOUjY4N3dBdmNBVXBWZm5ZYjhtOWxhUVJWREJzNVkweU9GZDFjK1RReW4xUzV1cU5HU0k9Ojq9qAi0es5Ezx.SR9wQFxkw&t=d2260402e70b695cc6db4b5c2f57f9ce&op=NzYwOTQ=": {
+      "m3u8": "https://nika.playmudos.com/MjAwSEpDRnNsdnlBV2ltQTB2QktVTklQTkJ5bGNubFIxcDdOWk0yUi9SVXYyVVo5eUxXVmlZUWdkL3I4QkluTA.m3u8?st=MMqwBoiq3KQZ9Z33REFFBQ&e=1787792111",
+      "fecha": "2026-08-26T16:55:12.256922"
     },
-    "https://jkanime.net/jkplayer/um?e=aEI2OGFGOWhUS1J2OWVkcWROcHdWLzUraFM4N0Rqc1ZHTlZUcThPNnQyL1dRcUFpTjREMmVIOVFvVHRBbW9UdDJCWDViT2QxSXhJVXRZSG03ZGRNbEVkdTVQR2VrcEx0aWEzVjZMb2RDYTg9OjozAPRgru9Qt8KQ.Mf57Spo&t=c571fe1866879e2235cfac442dca1911&op=NzQzNDk=": {
-      "m3u8": "https://nika.playmudos.com/K2xZUkVzYjFFcklBenlOTmNqZ3BUWVpnak5LWUh2NkhzbGNRblpKWllYYzRPcEtOeDdRbGNqeEVJMXNRNGJ0bA.m3u8?st=gPc-Fk_VfSBFGWf81r47pQ&e=1787791670",
-      "fecha": "2026-08-26T16:47:51.008471"
+    "https://jkanime.net/jkplayer/um?e=NzNPeXNqNUErYVozUW1FbDQxR0NXSmZYNU5xbUlGdHpoUWd4S2ZrVFJaalhibDRhdzNGL1ZOWlp2OE1KOWFVaFdKRnozWXZ4MHBCN01VOFExMW5VZE1nemo1QmlUN0dUM0hYY2xPK05ONWc9Ojoarn0Z3gh9GxNzb5aNPB_J&t=fc8be668a044b0fa3a94ba0700530721&op=NzYzODI=": {
+      "m3u8": "https://nika.playmudos.com/K1RPS0dwYU9yWlk5NjM5eEZQdXNDckwySitqU0cvcGJkaStLS2NaYWtDRElES01wMHF6SnhZa0tYTXVtSVFQcQ.m3u8?st=CBp75zC_tR0qmPpX1yqplw&e=1787792113",
+      "fecha": "2026-08-26T16:55:13.895178"
     },
-    "https://jkanime.net/jkplayer/um?e=SCtTY0c0MWppWWxGRE5kTVV2SzBSbHB6QkJxUExJYm5NRFE5czZtU0FTd1ZtWW8yZi9PcXcwcE5HSkdOYi9TTGFSTHZPaG5hcUFWWDVSdWozWVp0dlJnWkxiSGZTRDc2ejlUajJiamEvSXc9Ojq9kOS9rbtmLlVrxz4zIhRR&t=dc5054f5547c8ca9e7fc3c0ff7bc4452&op=NzQ2Mzg=": {
-      "m3u8": "https://nika.playmudos.com/bGV2Rm81aTdrWkszU0Ntc09mY0k4WlozQ1BmYkU3TXAyWHlyK1ZkWnpyQitRWXlxa09GY2xKd012eXJTSjhmMg.m3u8?st=fAVUJZSUrgGkW3CMwBMgdw&e=1787791672",
-      "fecha": "2026-08-26T16:47:52.239876"
+    "https://jkanime.net/jkplayer/um?e=YXVzcllQRnR6alZGczZBMHo5SUp6Z1pQSDR3RnVPSGM2ZWZhWUNjQnZyZ2pPZU5vMmNvVVRZRnRqRGU2dVFNdW02ZE5Ebmlmb3J2ZjFRd0Y0QUlxZjF3ZWpUUlJ6NzJpRjFuUVRWMkFHMU9seVdhYmUxUEs3SjdpdGF3YWE3WU46Ot3yuAg68_j9qKNF1YOKHrE-&t=08a775974d4b292c83aa13ee9fd3e33a&op=NzUzOTc=": {
+      "m3u8": "https://nika.playmudos.com/bEpkc1RoekV3K3c5anJmTHBocUcrZmlUYjE4Q3pqSStTanNIQUpNS1RWZGJoWVM4ODYyVnBTaStXWWUrWGU0OTVUUkdzemZJWTRmNlVoYTRiRXFCNkE9PQ.m3u8?st=Chv-9A5088Ue1wG4CU1feg&e=1787792117",
+      "fecha": "2026-08-26T16:55:17.683882"
     },
-    "https://jkanime.net/jkplayer/um?e=RTNMK3hkcjBWb21WTmdNYmIzcTZXT3hoOWF1NDlsV1hscElIWUlpd1dITFAwRDZ1RllFQ2t4RnJXZXI1K3RXYUt4UzIyU2FtWWM4NUJiL20ydEJYSjZkODZpVytRYlNuTG5Jb2JwRlR2d1hXVU9Sb1hYQzNzbW9OR2YreEFrNU06OusVjjA0OaGKVAecDvSLIc4-&t=a4d1a59e1a432ca8caaf95a148f1e15d&op=NzQ3Mzc=": {
-      "m3u8": "https://nika.playmudos.com/cXd2MnNyNjM5c1U0UTBMOUEzUlhLVi93cld3S3VjS2ljT3RCQTJLR2xnVkhMZlFBME5DQ2VoWm9BOEt5MWJyUWUya0hDd2dvSzRZaW9LVWwzSjArMWc9PQ.m3u8?st=HpyEF5PCgIGXlRC5QYq9GQ&e=1787791673",
-      "fecha": "2026-08-26T16:47:53.774269"
+    "https://jkanime.net/jkplayer/um?e=eUp1WkhLUVROMk85eHQwMlR3TWtqbG5kZmFleFpqSFlFaDFrWGpETERXNTNYeTlnU0xRSnd3Wmo4T3RydkkzNHlHUDQzWmI0d05LdmJLUm1UeFlFZzFNN2hCL1RiNzM2bll1bUgrdFV5cU09OjrgA5clVxCb9N71buiVLV.r&t=bf692e55f0c558376bf24b98a96a8bb3&op=NzU4MzA=": {
+      "m3u8": "https://nika.playmudos.com/aEc1SWdCdTNjRlNoT0dOU0k5WFlldnVEd1FWLzNTbE5pR0wvckZVNzNpQkdQdWw5SU1zS0dYUW0zQWdhMzcydWtiOEcvTmlUcTBKdXVnTWczNXc3aWc9PQ.m3u8?st=jSKuF9TfmIollVMV9f8t0w&e=1787792118",
+      "fecha": "2026-08-26T16:55:19.015575"
     },
-    "https://jkanime.net/jkplayer/um?e=U3dOQUppdTJZelNjbE1CelNLL2MzczlPN1hsN01neGZGc2p1dlhEN0xkY0tDY2drcGFJWUNiN25MUUJjamFmUGFLRENWclVOMEo1ZHk0V3Y0N3ZWMHFla2ptSmpzTFFMUy9WYlZvcTdnMXM9OjoqeUgnuGj.i8hi2MPKCuQO&t=1b4eb43d4e362e32c455fad610744a4c&op=NzI0ODg=": {
-      "m3u8": "https://nika.playmudos.com/SEJrWW5NbzFka3Jtb29ucWlYQkd6UWhCUlorcUY1NkdJUG95NFlVRyt3THJlZngzcHN2UHNTdzJRQWwwK2s1dA.m3u8?st=QA68TKxYai8T8oZ8-IqktA&e=1787791678",
-      "fecha": "2026-08-26T16:47:58.484048"
+    "https://jkanime.net/jkplayer/um?e=VVluTnZKS3VudytEUHZYUWpLSk1laHQ1dUx0Qi9uTlptRXBhdldHcEtmQkRlY1h5QWtEeTk1ZWVvSVB0VVdVbWZBRVQ4RnlsVmlaWExUS1ZNT1Z0dS8xUXVoVm1lZUROWlR5VUxic0ZMRzJQVGsySXdOYWNhQjk2dEliN00vZ1I6OgNFogK6vjDHGTXIpSs4NL0-&t=0f8a5c7f57d3daf587caf1132289ec85&op=NzYxNDc=": {
+      "m3u8": "https://nika.playmudos.com/bjZsUkEzM21tVkpESFZMSHVLV0p1VTkrR2tmNGp5OEJiVjZ3TnRUVS96M3hpbGxQWVRySTJqenBhb2crVVJSSHFqUFdERjdtZnZXQ1V0YXJiU1VyRDVBclAzSG9ib2FuU0JsZFBWU2hEMUU9.m3u8?st=edF9UJjwgIrXchv6mRTbsw&e=1787792120",
+      "fecha": "2026-08-26T16:55:20.448829"
     },
-    "https://jkanime.net/jkplayer/um?e=TjdvQmJoUmY2akRmODNYUnZ5cHRtSUJZN3NmVlRrSkZPa04xYzBLQzh1bFdjQ3orRWxqMlFRdG1tTVE0ZURXbGZidjhGcE1sbW4xblZtQ09ZaHhQdDJadUc4c0N2N08zNnBRUDg2LzJKRGVsdkdHUTBmYzlwZ0I5THJ4OTh5MW86OqPQ6AdTl1fIdvrAywvXX4M-&t=5b875e2a2082b3d50cfd9220dae7cc2e&op=NzI2NDk=": {
-      "m3u8": "https://nika.playmudos.com/dDZqZGgxV0JJMFh6VURhME5tN3BLY25ram54ZUdYalN0dlVjNnNjdXBYSVZGa25BSDAvaEI4UExKWUIwdHJ3WndBaHhETm1EVmFVOEZPalkzOHl1OGc9PQ.m3u8?st=53nJFI4IAcu81F4P40DH0w&e=1787791679",
-      "fecha": "2026-08-26T16:47:59.713486"
+    "https://jkanime.net/jkplayer/um?e=N1lOT3RjN2VMcFNrUkNwenFRVzF3dTNFcWh6bThlOFZnTTdyT0JyYmpPdE9Pemx1ZGNocG42aDJsZEZNWUJyamR4Zm5NeVlJVWF6b1Rlb2djejN6cm1PWi9mVXovOURhNXhQbFZHV1BYRDMvdkFlVzArcXluMlcwbzNVV0NaWUs6OrQjSTOBT1ThQpZ5WUxmPjE-&t=90fdd3e4e97d6205cfe72ba60cb3d8c4&op=NzY0MTk=": {
+      "m3u8": "https://nika.playmudos.com/ZURPTkFCbHBBSEZGVXdEYmNoak1tRm1pc3p6cmw1MmFzbzQ3ZFQ1NENCYld3dU05SWtsNlluemx1UVZQbkJXdVRyL1c5WTk0a01PejhUU2JRUzNjWVE9PQ.m3u8?st=pWp-5KF2cK2IejhXqsYbyA&e=1787792121",
+      "fecha": "2026-08-26T16:55:21.882342"
     },
-    "https://jkanime.net/jkplayer/um?e=Y0Q4R3RoWk5Pd0FWZm1aMXhQdzZTbkRNMzBTc2krR2xuR2xWRk83QUh1SW93c2hGanZjTHNJUFphV0tpbVhrRWxmeTYvQUZOb0dDNHBUbU9WMXQ1UUdiSkRaQXhLb2JGZWNqczBPK2hmWFU9OjrTEcBoII6Avww.txxGjj8Z&t=1e95115939814c9e826fa176c6b112c8&op=NzI3NTI=": {
-      "m3u8": "https://nika.playmudos.com/cit2OU1rVHl6VCtHakxwTDNYWnc1dDVPbjZkNVh1a0xnNlhFSnd0RFBKSzJtRG1nSmZ4OUJjcWFtNWpiMFBidw.m3u8?st=arX36RgBz3LM9Lf2PMyiDA&e=1787791680",
-      "fecha": "2026-08-26T16:48:00.943881"
-    },
-    "https://jkanime.net/jkplayer/um?e=dnEwSWtMNjJCWThFZmJyWERoS3BtZE9YUW9maENXQnBYVnZlb25ockpPUE5SaUZxUnl3VTRhelVxWXN2ZlByaUR6QTRrZTdLamFSQ3M4bHRBU2ovbTlvZ1ljQ0cySnI1bDgxY3BQd1hnOUk9OjoiC941zsf3DxmBLTbW_FmF&t=6d426f030230da9a97385f5e6e418ec0&op=NzI5NDM=": {
-      "m3u8": "https://nika.playmudos.com/RVBSbHpRWWQ1R2dSeW9JQU4zOHJHRG9kcEh3eEhCS1ZGNlNzd0F0YU5CSDZqdjA5Z2U5dDJGMG5tVmFvaDNWMUs4NzZyVlVCa2Q3Z2NNQTBsdGJ6VVE9PQ.m3u8?st=9WxhAH4MXa_qk670Ua8EjA&e=1787791682",
-      "fecha": "2026-08-26T16:48:02.273434"
-    },
-    "https://jkanime.net/jkplayer/um?e=dFI0MWNjd09hZitlMkJ6TGdiLzl5ZFR1akRCVGZSYno0NFBjTEtxWVJDSGtBM0FFZ1g2TTdIZHlFUVZaTlp0Q0ZXazFucm1RY3l3TVZ2UGNQNlRzaURKR0tMeVFkQW1aNElzQW5WRmJSaHc9OjreOunbkmNyGU5sJEgOZdiA&t=09ac4e85078a5f0ffa2d69574fc0caac&op=NzMxNDE=": {
-      "m3u8": "https://nika.playmudos.com/N2FVMXlJZUFKWXQ4WWRFYno4ZlJXOGR6Rk9OSkwyYkk2SllreGk2cjhPY3VWUEh0QjVoSWd2dnEwZFlIczBPeg.m3u8?st=qS9eyZo9xbH0fkmKbISK4Q&e=1787791683",
-      "fecha": "2026-08-26T16:48:03.604607"
-    },
-    "https://jkanime.net/jkplayer/um?e=ZTRZT0xIYWZianR6Z3NndzBLVWZqU3dXNzJleTI0S1YvTElBQlF0ZHNMUDUxWHhqMnFnNzZibnlUT002S0FVeXVqYUZzSVJ4YWkyZHJzZkdaQzh3eHBBYVZWZFZoeHNiWThzV2xiQ09uSDA9OjokdPXUup0LPHcJc6x2z9Xc&t=04883f83a43757453b195c3c4d23e469&op=NzMyNjQ=": {
-      "m3u8": "https://nika.playmudos.com/alpjV3BXbFREUlRYMlVvNGlqVVJTRU5INHRYbGdDRUpBRDJ4d2xnbEJLM1ZYdHdQUjZqc3FwamJJdGNUSUJHSzNldGVLdG5JUlM4cUhaYWxKc2pRR1E9PQ.m3u8?st=7F9ULeVLHpeZtZMbfMmC-g&e=1787791684",
-      "fecha": "2026-08-26T16:48:04.935824"
-    },
-    "https://jkanime.net/jkplayer/um?e=eVJHMjFsMmVQQ29PLzhMOWJOdkpnRjBKcmNvaUt4cXROdVpQRVFLQUxBaWd4WUFsck9DWWplL2o3YVU2M3F5dzdNRzMxckNoaVBQRm4wQ1I2WWVrdHFEdWxlMFVuK0d0Vk5ZWnRTaUFuUGNKV1VtYm1FaVdzL3htdTlqblR6d2Q6OpVP_Epa63Fi4iX7_0.vIo8-&t=bb9569f7b88feecd0cac9d373a707388&op=NzMzODA=": {
-      "m3u8": "https://nika.playmudos.com/THppbGR5S2FVelZXM1VKSVQwQXUyWE4zN3Vwb010ZDVhaUUvVWNjOHlYeU1RUldsd0dpTHF0d3VmNkdBQU40M1lEWFcrenNsUC9qaEVPb2NMRS9Vd2c9PQ.m3u8?st=xCtwGfyUADIAalAUGrySaw&e=1787791685",
-      "fecha": "2026-08-26T16:48:06.163888"
-    },
-    "https://jkanime.net/jkplayer/um?e=M3JNenNRL1Vic1Y4dmowV2NOeU55VnUwK2xVNW9RTWd3Y2s5WFN4S28zWDVRMlZJa0NDTjRYK2Q1M0lXcENYeFhQcjhpQUdoOUZIYVZlZjdwdDJwM3l4Mks2OEpzV21YSUNrazQ5VFZDUzQ9Ojr2zwP__HYJ.krekD0As7Si&t=102c322d4b6c2815bf518f31c0dfed2d&op=NzM1NDM=": {
-      "m3u8": "https://nika.playmudos.com/UmtWaHJDUEhLdGtyYVJPazlqVDVvZmpaYldOcU5obERvMDRIWTcycmkyQWkwODk4OGREWGdyS2FuaFpXZ0NuTFZ4WWM5S1NncFFTMlpFeitlaW1WVEE9PQ.m3u8?st=8wBDslx4t5kni16CksWUiw&e=1787791687",
-      "fecha": "2026-08-26T16:48:07.495394"
-    },
-    "https://jkanime.net/jkplayer/um?e=NmlKcHVXaDArSERwaEtCMWNYQmxRRU9oV2xhbDAxTVFFR01ma0d5SzJBWEZWK05TRllQTm92TG03WXg2MUxLR3BWSkE5NmlzK0tkSzUrS1RmaWRnRlhYbjZnekpnY0I3Z0c0SURjNndHSTQ9OjpZ0HMd0XKj4o8LuFcclnjf&t=6b65ef9ec1767d24d817a609f0526ef7&op=NzQxODY=": {
-      "m3u8": "https://nika.playmudos.com/RVBSbHpRWWQ1R2dSeW9JQU4zOHJHQldIVVBET2dXbElXNW4va2hMczdnWEdVRG1DaUJHcTY1MEFhZXh5VVJVaw.m3u8?st=WOKKjGXi7MxysPk6B3fv1g&e=1787791688",
-      "fecha": "2026-08-26T16:48:08.826715"
-    },
-    "https://jkanime.net/jkplayer/um?e=NVE0OXJuc1prNVg4c2hrckVuZjJoeUo3eUpldGhZUkRBMUkyYjl4L2hNa0taRFovZksxYVFpRXprYVRYZm1mV1VJWjI2d0Y3LzBPd1AvdkkwajI5cVE2QkxmUG5uSVAzSmZ2UFNjTW1VV0U9OjoN07_ij2gbCGoIKjBA.ef0&t=30eb8d407469958ff6d89bd223ea29ec&op=NzQzMjU=": {
-      "m3u8": "https://nika.playmudos.com/NW9kdTdxWk5Cdm5jaHhyekphRG5NUjVQVmk4ZkNuN2JIeWlRaEdOYmloZnJSRDVlb1BxV1M4VDJzNWVCUmFFRGJhb3BwaExHV1J6YmZCUzRQYjFpbXc9PQ.m3u8?st=FLlv4vIG9JkWqqJdEdgp_Q&e=1787791689",
-      "fecha": "2026-08-26T16:48:10.582463"
-    },
-    "https://jkanime.net/jkplayer/um?e=SWt4MEZZMkdkRWpRZytrMFlhcmh3UXpjOEpyR0gwNDRlemJDWE83a0xTaE92cTJBQUlQY01JazNnWXVmS2JJMlFvOC9GUUpNMm1NRHlHMDFWZUxEajFOS2NPbmNFN2F1NlJFS1U1NnQrbUk9Ojr2aubxjnnAWQhxKyNpUxh7&t=e0f6356fd9b3ed8f14562a31d95c8034&op=NzQ2MTg=": {
-      "m3u8": "https://nika.playmudos.com/cmJQZ2dEWlhPRm5ydkFnUFFhbTR5V3JDejcxNTZXZW5yU1hzUW93M2FXK2d2ejZ1VHpMaUczRFJYckw5ZUlQODFZUm16Z2F6eENVbVBZTXovNUVqakE9PQ.m3u8?st=MiEgmL6sljbjNS6vTt_bqg&e=1787791692",
-      "fecha": "2026-08-26T16:48:13.345056"
-    },
-    "https://jkanime.net/jkplayer/um?e=SWtkeXErZXVYRC9uK2o2S2gvOEc0UWVlWWhzWUFHazlLZjQ4VU95cElSSnJHbitJWFN6UEF5NjRBVlgya1pXUDV0STNhVDRGT0xOaEZNSmZYTkZId0dLUDR2YzA2dGY1M002MEpXdTQzeXc9Ojpo_rksaJO5BsStW4CliH6T&t=e3c408066144e9bb6a75cbc26671c933&op=NzQ3MjM=": {
-      "m3u8": "https://nika.playmudos.com/OUNNU25VS013N25qdWk5RkdIUGw2NGpHVzNGcWkvcEFKenI5NTZpRDFuSlZnTVFueVpCTHRvdjB3YXdTR1FlRg.m3u8?st=g0o9llI9LzetizGugO3tfQ&e=1787791695",
-      "fecha": "2026-08-26T16:48:15.682157"
+    "https://jkanime.net/jkplayer/um?e=emorMlBwY1FMU0liNE40ekdrMHZ0ckFDMWhzQlk4OTRqZ0RHZ1J3bHIvZUlhVUkrRnYvZEg5SWV4anZtTFNSeWhzWUNmdXFvcFBCeUM0OTg5U0UyakRvTm9hRlJkZTZZblNCK1FFbGE5VldISk1mT0hYaXMrVnlEeXJTVHBSU0E6OuttEdDFzKJQN.C5hxe7Ppc-&t=9dedbe8eeb0d7491fc72fe836caa89b8&op=NzY2NzE=": {
+      "m3u8": "https://nika.playmudos.com/MGtxUGJrT216cW1nNGcyTXp5OFFCcFBPL0dCZVlJLzh0ZmxwQWVFeVBrM1QydE44azdtdzA3ckVka1JPWjFZQ0sxcUQ3cmJjK0RMSVVrNDExY3NXVWc9PQ.m3u8?st=7fySzez5Wn0Sw7KRo434NA&e=1787792123",
+      "fecha": "2026-08-26T16:55:23.311088"
     }
-  }
+  },
+  "ultima_ejecucion": "2026-08-26T16:55:25.761676"
 }

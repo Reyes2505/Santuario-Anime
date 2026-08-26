@@ -9,7 +9,6 @@ interface VideoPlayerProps {
 }
 
 export default function VideoPlayer({ episodio }: VideoPlayerProps) {
-  const [iframeError, setIframeError] = useState(false);
   const [animeSlug, setAnimeSlug] = useState('');
 
   const url = episodio.url_stream || '';
@@ -17,7 +16,7 @@ export default function VideoPlayer({ episodio }: VideoPlayerProps) {
   const isM3U8 = url.includes('.m3u8');
   const isJkPlayer = url.includes('jkplayer') || url.includes('jkanime.net');
 
-  // Obtener el slug del anime desde Supabase
+  // Obtener slug del anime
   useEffect(() => {
     async function getAnimeSlug() {
       try {
@@ -43,46 +42,19 @@ export default function VideoPlayer({ episodio }: VideoPlayerProps) {
           }
         }
       } catch (err) {
-        console.error('Error obteniendo slug:', err);
+        console.error('Error:', err);
       }
     }
 
     if (isM3U8) {
       getAnimeSlug();
     }
-  }, [episodio.temporada_id, episodio.numero, isM3U8]);
-
-  // Para M3U8, usar la página de JK Anime
-  if (isM3U8 && animeSlug) {
-    const jkUrl = `https://jkanime.net/${animeSlug}/${episodio.numero}/`;
-    
-    return (
-      <div className="w-full max-w-5xl mx-auto space-y-4">
-        <div className="relative aspect-video w-full overflow-hidden rounded-xl border border-zinc-800 bg-black">
-          <iframe
-            key={episodio.id}
-            src={`/api/player?url=${encodeURIComponent(jkUrl)}&autoplay=1`}
-            className="h-full w-full"
-            allowFullScreen
-            allow="autoplay; encrypted-media; fullscreen"
-            onError={() => setIframeError(true)}
-            title={`Episodio ${episodio.numero}`}
-          />
-        </div>
-        <div className="p-4 rounded-xl border border-zinc-800 bg-zinc-900/40 flex items-center justify-between">
-          <h2 className="text-sm font-bold text-white">Episodio {episodio.numero}</h2>
-          <a href={jkUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-400">
-            Abrir en JK Anime
-          </a>
-        </div>
-      </div>
-    );
-  }
+  }, [episodio.temporada_id, isM3U8]);
 
   // Video local
   if (isLocal) {
     return (
-      <div className="w-full max-w-5xl mx-auto space-y-4">
+      <div className="w-full max-w-5xl mx-auto">
         <div className="relative aspect-video w-full overflow-hidden rounded-xl border border-zinc-800 bg-black">
           <video src={url} controls playsInline className="h-full w-full object-contain" />
         </div>
@@ -90,18 +62,37 @@ export default function VideoPlayer({ episodio }: VideoPlayerProps) {
     );
   }
 
-  // JK Player directo
-  if (isJkPlayer && !iframeError) {
+  // Para M3U8 - construir URL de la página del episodio
+  if (isM3U8 && animeSlug) {
+    const episodePageUrl = `https://jkanime.net/${animeSlug}/${episodio.numero}/`;
+    
     return (
-      <div className="w-full max-w-5xl mx-auto space-y-4">
+      <div className="w-full max-w-5xl mx-auto">
         <div className="relative aspect-video w-full overflow-hidden rounded-xl border border-zinc-800 bg-black">
           <iframe
             key={episodio.id}
-            src={`/api/player?url=${encodeURIComponent(url)}&autoplay=1`}
+            src={`/api/player?url=${encodeURIComponent(episodePageUrl)}`}
             className="h-full w-full"
             allowFullScreen
             allow="autoplay; encrypted-media; fullscreen"
-            onError={() => setIframeError(true)}
+            title={`Episodio ${episodio.numero}`}
+          />
+        </div>
+      </div>
+    );
+  }
+
+  // Para JK Player directo
+  if (isJkPlayer) {
+    return (
+      <div className="w-full max-w-5xl mx-auto">
+        <div className="relative aspect-video w-full overflow-hidden rounded-xl border border-zinc-800 bg-black">
+          <iframe
+            key={episodio.id}
+            src={`/api/player?url=${encodeURIComponent(url)}`}
+            className="h-full w-full"
+            allowFullScreen
+            allow="autoplay; encrypted-media; fullscreen"
             title={`Episodio ${episodio.numero}`}
           />
         </div>
@@ -111,12 +102,9 @@ export default function VideoPlayer({ episodio }: VideoPlayerProps) {
 
   // Fallback
   return (
-    <div className="w-full max-w-5xl mx-auto space-y-4">
-      <div className="relative aspect-video w-full overflow-hidden rounded-xl border border-zinc-800 bg-black flex flex-col items-center justify-center p-8">
-        <div className="text-5xl mb-4">Video no disponible</div>
-        <a href={url} target="_blank" rel="noopener noreferrer" className="rounded-lg bg-blue-600 px-6 py-3 text-sm font-bold text-white">
-          Ver en JK Anime
-        </a>
+    <div className="w-full max-w-5xl mx-auto">
+      <div className="relative aspect-video w-full overflow-hidden rounded-xl border border-zinc-800 bg-black flex items-center justify-center">
+        <p className="text-sm text-zinc-500">Video no disponible</p>
       </div>
     </div>
   );

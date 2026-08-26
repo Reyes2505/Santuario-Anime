@@ -14,7 +14,10 @@ export default function MiListaPage() {
   useEffect(() => {
     async function cargar() {
       setLoading(true);
-      setTracking(getTracking());
+      
+      // ✅ CON AWAIT
+      const trackingData = await getTracking();
+      setTracking(trackingData);
 
       const { data } = await supabase.from('animes').select('*');
       if (data) setAnimes(data);
@@ -30,7 +33,7 @@ export default function MiListaPage() {
   if (loading) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-zinc-950">
-        <div className="animate-spin h-12 w-12 border-2 border-t-blue-500 border-zinc-800 rounded-full" />
+        <div className="animate-spin h-8 w-8 border-2 border-t-transparent border-white rounded-full" />
       </main>
     );
   }
@@ -38,7 +41,7 @@ export default function MiListaPage() {
   return (
     <main className="min-h-screen bg-zinc-950 pb-16">
       <div className="mx-auto max-w-7xl px-4 py-8">
-        <h1 className="text-2xl font-bold text-white mb-6">📋 Mi Lista</h1>
+        <h1 className="text-2xl font-black text-white mb-6">📋 Mi Lista</h1>
 
         {/* Viendo */}
         <section className="mb-10">
@@ -51,7 +54,7 @@ export default function MiListaPage() {
                 <Link
                   key={anime.id}
                   href={`/anime/${anime.id}`}
-                  className="group relative overflow-hidden rounded-2xl border border-zinc-800/60 bg-zinc-900/40 hover:border-blue-500/50 transition-all hover:scale-105"
+                  className="group relative overflow-hidden rounded-xl border border-zinc-800/60 bg-zinc-900/40 hover:border-blue-500/50 transition-all"
                 >
                   <div className="aspect-[3/4] overflow-hidden">
                     {anime.portada_url ? (
@@ -62,8 +65,8 @@ export default function MiListaPage() {
                   </div>
                   <div className="absolute bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-black to-transparent">
                     <h3 className="text-xs font-bold text-white line-clamp-2">{anime.titulo}</h3>
-                    <p className="text-[10px] text-zinc-400 mt-1">
-                      EP {tracking[anime.id]?.ultimoEpisodio || 0} · {tracking[anime.id]?.progreso || 0}%
+                    <p className="text-[10px] text-blue-400 mt-1">
+                      EP {tracking[anime.id]?.ultimoEpisodio || 0}
                     </p>
                   </div>
                 </Link>
@@ -85,7 +88,7 @@ export default function MiListaPage() {
                 <Link
                   key={anime.id}
                   href={`/anime/${anime.id}`}
-                  className="group relative overflow-hidden rounded-2xl border border-zinc-800/60 bg-zinc-900/40 hover:border-green-500/50 transition-all hover:scale-105"
+                  className="group relative overflow-hidden rounded-xl border border-zinc-800/60 bg-zinc-900/40 hover:border-green-500/50 transition-all"
                 >
                   <div className="aspect-[3/4] overflow-hidden">
                     {anime.portada_url ? (
@@ -116,7 +119,7 @@ export default function MiListaPage() {
                 <Link
                   key={anime.id}
                   href={`/anime/${anime.id}`}
-                  className="group relative overflow-hidden rounded-2xl border border-zinc-800/60 bg-zinc-900/40 hover:border-yellow-500/50 transition-all hover:scale-105"
+                  className="group relative overflow-hidden rounded-xl border border-zinc-800/60 bg-zinc-900/40 hover:border-yellow-500/50 transition-all"
                 >
                   <div className="aspect-[3/4] overflow-hidden">
                     {anime.portada_url ? (
@@ -132,7 +135,7 @@ export default function MiListaPage() {
               ))}
             </div>
           ) : (
-            <p className="text-sm text-zinc-500">No hay animes en tu lista de pendientes.</p>
+            <p className="text-sm text-zinc-500">No hay animes pendientes.</p>
           )}
         </section>
       </div>

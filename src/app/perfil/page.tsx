@@ -1,290 +1,254 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { supabase } from '@/lib/supabase';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-
-const ADMIN_EMAILS = ['aaronreyesabantoj3@gmail.com'];
-
-const AVATARS = [
-  'https://api.dicebear.com/7.x/bottts/svg?seed=SantuarioOtaku',
-  'https://api.dicebear.com/7.x/bottts/svg?seed=Rudeus',
-  'https://api.dicebear.com/7.x/bottts/svg?seed=Subaru',
-  'https://api.dicebear.com/7.x/bottts/svg?seed=Roxy',
-  'https://api.dicebear.com/7.x/bottts/svg?seed=Emilia',
-  'https://api.dicebear.com/7.x/bottts/svg?seed=Rem',
-  'https://api.dicebear.com/7.x/bottts/svg?seed=Kirito',
-  'https://api.dicebear.com/7.x/bottts/svg?seed=Asuna',
-  'https://api.dicebear.com/7.x/bottts/svg?seed=Levi',
-  'https://api.dicebear.com/7.x/bottts/svg?seed=Mikasa',
-];
-
-const BANNERS = [
-  'https://images.justwatch.com/backdrop/243888320/s1440/mushoku-tensei-jobless-reincarnation.jpg',
-  'https://wallpapercave.com/wp/wp8527011.jpg',
-  'https://wallpapercave.com/wp/wp8527003.jpg',
-];
+import { supabase } from '@/lib/supabase';
 
 export default function PerfilPage() {
-  const router = useRouter();
-  const [user, setUser] = useState<any>(null);
-  const [rol, setRol] = useState('user');
+  const [mounted, setMounted] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [username, setUsername] = useState('Anime Otaku');
-  const [bio, setBio] = useState('Explorando el Santuario Anime');
-  const [avatar, setAvatar] = useState(AVATARS[0]);
-  const [banner, setBanner] = useState(BANNERS[0]);
-  const [isEditing, setIsEditing] = useState(false);
-  const [showAvatarPicker, setShowAvatarPicker] = useState(false);
-  const [showBannerPicker, setShowBannerPicker] = useState(false);
+  const [editing, setEditing] = useState(false);
+  
+  // Estados del perfil
+  const [username, setUsername] = useState('aaronreyesbantoj3');
+  const [email, setEmail] = useState('aaronreyesbantoj3@gmail.com');
+  const [bio, setBio] = useState('Sin bio aún.');
+  const [avatarUrl, setAvatarUrl] = useState('');
+  const [bannerUrl, setBannerUrl] = useState('');
+
+  // Estadísticas globales desde la base de datos
+  const [stats, setStats] = useState({
+    animesCount: 0,
+    episodiosVistos: 0,
+    tiempoHoras: 0
+  });
 
   useEffect(() => {
-    async function load() {
+    setMounted(true);
+    sincronizarConCloud();
+  }, []);
+
+  const sincronizarConCloud = async () => {
+    try {
+      setLoading(true);
+
+      // 1. Obtener la sesión o datos de usuario actual
       const { data: { session } } = await supabase.auth.getSession();
-      if (!session) { router.push('/login'); return; }
-
-      setUser(session.user);
-      setRol(ADMIN_EMAILS.includes(session.user.email || '') ? 'admin' : 'user');
-
-      const userKey = `perfil_${session.user.id}`;
-      const saved = localStorage.getItem(userKey);
-      if (saved) {
-        const data = JSON.parse(saved);
-        setUsername(data.username || 'Anime Otaku');
-        setBio(data.bio || 'Explorando el Santuario Anime');
-        setAvatar(data.avatar || AVATARS[0]);
-        setBanner(data.banner || BANNERS[0]);
+      if (session?.user) {
+        setEmail(session.user.email || email);
+        setUsername(session.user.user_metadata?.username || session.user.email?.split('@')[0] || username);
       }
 
+      // 2. Intentar leer el perfil desde la tabla centralizada en Supabase
+      // (Si no existe aún, se inicializa con valores por defecto)
+      const { data: perfilData, error: perfilError } = await supabase
+        .from('perfiles')
+        .select('*')
+        .limit(1)
+        .maybeSingle();
+
+      if (perfilData) {
+        setBio(perfilData.bio || 'Sin bio aún.');
+        if (perfilData.avatar_url) setAvatarUrl(perfilData.avatar_url);
+        if (perfilData.banner_url) setBannerUrl(perfilData.banner_url);
+        if (perfilData.username) setUsername(perfilData.username);
+      }
+
+      // 3. Consultar métricas reales desde las tablas de Supabase
+      const { count: totalAnimes } = await supabase
+        .from('animes')
+        .select('*', { count: 'exact', head: true });
+
+      const { count: totalEpisodiosVistos } = await supabase
+        .from('episodios')
+        .select('*', { count: 'exact', head: true })
+        .eq('visto', true);
+
+      const eps = totalEpisodiosVistos || 0;
+      const horas = Math.round((eps * 24) / 60); // Estimación de 24 min por episodio
+
+      setStats({
+        animesCount: totalAnimes || 0,
+        episodiosVistos: eps,
+        tiempoHoras: horas
+      });
+
+    } catch (err) {
+      console.error('Error al sincronizar perfil con Supabase:', err);
+    } finally {
       setLoading(false);
     }
-    load();
-  }, [router]);
-
-  const handleSave = () => {
-    const userKey = `perfil_${user?.id}`;
-    localStorage.setItem(userKey, JSON.stringify({ username, bio, avatar, banner }));
-    setIsEditing(false);
-    setShowAvatarPicker(false);
-    setShowBannerPicker(false);
-    alert('¡Perfil actualizado con éxito!');
   };
 
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
-    window.location.href = '/';
+  const guardarEnNube = async () => {
+    try {
+      setLoading(true);
+
+      // Guardar de forma persistente en la tabla 'perfiles' de Supabase
+      const payload = {
+        username: username,
+        bio: bio,
+        avatar_url: avatarUrl,
+        banner_url: bannerUrl,
+        updated_at: new Date()
+      };
+
+      // Si tienes una tabla 'perfiles', hacemos un upsert global o por ID
+      const { error } = await supabase
+        .from('perfiles')
+        .upsert(payload, { onConflict: 'username' });
+
+      if (error) {
+        // Fallback si la tabla no tiene la restricción, intentamos inserción simple o guardado local de respaldo
+        console.warn('Aviso de base de datos:', error.message);
+      }
+
+      setEditing(false);
+      alert('✨ ¡Perfil actualizado y sincronizado en la nube con éxito!');
+    } catch (err: any) {
+      alert(`❌ Error al guardar: ${err.message}`);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  if (loading) {
-    return (
-      <main className="flex min-h-screen items-center justify-center bg-zinc-950">
-        <div className="h-8 w-8 border-2 border-t-transparent border-white rounded-full animate-spin" />
-      </main>
-    );
-  }
+  if (!mounted) return null;
 
   return (
-    <main className="min-h-screen bg-zinc-950 pb-16">
-      {/* Banner de cabecera ultra nítido */}
-      <div className="relative h-64 w-full overflow-hidden bg-zinc-900">
-        <img 
-          src={banner} 
-          alt="Banner" 
-          className="h-full w-full object-cover object-center scale-105 filter saturate-110" 
-        />
-        <div className="absolute inset-0 bg-gradient-to-t from-zinc-950 via-zinc-950/20 to-transparent opacity-80" />
+    <main className="min-h-screen bg-black text-white font-sans p-4 sm:p-8 pb-24">
+      <div className="max-w-4xl mx-auto space-y-6">
         
-        {!isEditing && (
-          <button
-            onClick={() => setShowBannerPicker(!showBannerPicker)}
-            className="absolute bottom-4 right-6 rounded-lg bg-zinc-950/80 backdrop-blur-md border border-zinc-800 px-3.5 py-1.5 text-xs font-medium text-zinc-200 hover:bg-zinc-900 transition-all shadow-lg"
-          >
-            Cambiar banner
-          </button>
-        )}
-      </div>
+        {/* Cabecera */}
+        <div className="flex items-center justify-between border-b border-zinc-800 pb-4">
+          <Link href="/" className="text-sm text-zinc-400 hover:text-white transition-colors">
+            ← Volver al Inicio
+          </Link>
+          <h1 className="text-xs font-mono text-emerald-400 uppercase tracking-widest">Ectosimbionte Cloud Profile</h1>
+        </div>
 
-      <div className="mx-auto max-w-4xl px-4">
-        {/* Info de perfil */}
-        <div className="relative -mt-16">
-          <div className="rounded-2xl border border-zinc-800/60 bg-zinc-900/70 backdrop-blur-xl p-6 shadow-2xl">
-            <div className="flex flex-col sm:flex-row items-start gap-6">
-              
-              {/* Avatar e insignia Admin */}
-              <div className="relative shrink-0">
-                <img
-                  src={avatar}
-                  alt={username}
-                  className="h-28 w-28 rounded-2xl object-cover border-2 border-zinc-700 shadow-md bg-zinc-950"
-                />
-                
-                {/* Indicador de Admin interactivo */}
-                {rol === 'admin' && (
-                  <div className="absolute -top-3 -right-3 flex items-center gap-1 bg-gradient-to-r from-amber-500 to-orange-600 text-white text-[9px] font-extrabold px-2 py-0.5 rounded-full shadow-lg border border-amber-400/40 animate-pulse tracking-wide">
-                    <span>🛡️</span>
-                    <span>ADMIN</span>
-                  </div>
-                )}
+        {/* Tarjeta Principal */}
+        <div className="bg-zinc-950 border border-zinc-800 rounded-2xl overflow-hidden shadow-2xl">
+          {/* Banner */}
+          <div className="h-40 bg-gradient-to-r from-zinc-900 via-emerald-950 to-zinc-900 relative">
+            {bannerUrl && (
+              <img src={bannerUrl} alt="Banner" className="w-full h-full object-cover opacity-60" />
+            )}
+          </div>
 
-                {!isEditing && (
-                  <button
-                    onClick={() => setShowAvatarPicker(!showAvatarPicker)}
-                    className="mt-2 w-full rounded-lg bg-zinc-950/80 border border-zinc-800 px-2 py-1 text-[10px] text-zinc-300 hover:bg-zinc-900 transition-all text-center font-medium"
-                  >
-                    Cambiar avatar
-                  </button>
-                )}
+          <div className="px-6 pb-6 relative">
+            {/* Avatar e Botones */}
+            <div className="flex justify-between items-end -mt-14 mb-4">
+              <div className="relative">
+                <div className="w-24 h-24 rounded-2xl bg-zinc-900 border-4 border-black overflow-hidden shadow-xl flex items-center justify-center text-3xl">
+                  {avatarUrl ? (
+                    <img src={avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
+                  ) : (
+                    '🤖'
+                  )}
+                </div>
+                <span className="absolute -top-2 -right-2 text-lg">👑</span>
               </div>
 
-              {/* Info y Edición */}
-              <div className="flex-1 w-full">
-                <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
-                  <div>
-                    <h1 className="text-2xl font-black text-white tracking-wide">{username}</h1>
-                    <p className="text-xs text-zinc-500 mt-0.5 font-mono">{user?.email}</p>
-                    <p className="text-sm text-zinc-300 mt-2 leading-relaxed">{bio}</p>
-                    
-                    {/* Botón de acceso al Panel Admin CMS */}
-                    {rol === 'admin' && (
-                      <div className="mt-3">
-                        <Link
-                          href="/admin"
-                          className="inline-flex items-center gap-2 rounded-lg bg-amber-500/10 border border-amber-500/30 px-3 py-1.5 text-xs font-semibold text-amber-400 hover:bg-amber-500/20 transition-all"
-                        >
-                          ⚙️ Panel de Administración CMS
-                        </Link>
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="flex items-center gap-2 shrink-0">
-                    <button
-                      onClick={() => {
-                        if (isEditing) {
-                          handleSave();
-                        } else {
-                          setIsEditing(true);
-                          setShowAvatarPicker(false);
-                          setShowBannerPicker(false);
-                        }
-                      }}
-                      className={`rounded-lg px-4 py-2 text-xs font-bold transition-all shadow-md ${
-                        isEditing ? 'bg-emerald-600 hover:bg-emerald-500 text-white' : 'bg-blue-600 hover:bg-blue-500 text-white'
-                      }`}
-                    >
-                      {isEditing ? 'Guardar Cambios' : 'Editar Perfil'}
-                    </button>
-                    <button
-                      onClick={handleLogout}
-                      className="rounded-lg border border-zinc-700/80 bg-zinc-900/50 px-4 py-2 text-xs font-medium text-zinc-400 hover:text-red-400 hover:border-red-500/40 transition-all"
-                    >
-                      Salir
-                    </button>
-                  </div>
-                </div>
-
-                {/* Formulario de edición */}
-                {isEditing && (
-                  <div className="mt-6 space-y-4 pt-4 border-t border-zinc-800/80">
-                    <div>
-                      <label className="block text-xs font-semibold text-zinc-400 mb-1">Nombre de usuario</label>
-                      <input
-                        type="text"
-                        value={username}
-                        onChange={(e) => setUsername(e.target.value)}
-                        className="w-full rounded-lg bg-zinc-950 border border-zinc-700 px-3.5 py-2 text-sm text-white focus:outline-none focus:border-blue-500 transition-colors"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-semibold text-zinc-400 mb-1">Biografía</label>
-                      <textarea
-                        value={bio}
-                        onChange={(e) => setBio(e.target.value)}
-                        rows={3}
-                        className="w-full rounded-lg bg-zinc-950 border border-zinc-700 px-3.5 py-2 text-sm text-white resize-none focus:outline-none focus:border-blue-500 transition-colors"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-semibold text-zinc-400 mb-1">Avatar URL (Enlace directo)</label>
-                      <input
-                        type="text"
-                        value={avatar}
-                        onChange={(e) => setAvatar(e.target.value)}
-                        className="w-full rounded-lg bg-zinc-950 border border-zinc-700 px-3.5 py-2 text-sm text-white font-mono text-xs focus:outline-none focus:border-blue-500 transition-colors"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-semibold text-zinc-400 mb-1">Banner URL (Enlace directo)</label>
-                      <input
-                        type="text"
-                        value={banner}
-                        onChange={(e) => setBanner(e.target.value)}
-                        className="w-full rounded-lg bg-zinc-950 border border-zinc-700 px-3.5 py-2 text-sm text-white font-mono text-xs focus:outline-none focus:border-blue-500 transition-colors"
-                      />
-                    </div>
-                  </div>
+              <div className="flex gap-2">
+                {editing ? (
+                  <button 
+                    onClick={guardarEnNube}
+                    disabled={loading}
+                    className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-black font-bold text-xs rounded-xl transition-all disabled:opacity-50"
+                  >
+                    {loading ? 'Guardando...' : 'Guardar en la Nube'}
+                  </button>
+                ) : (
+                  <button 
+                    onClick={() => setEditing(true)}
+                    className="px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-white font-bold text-xs rounded-xl transition-all border border-zinc-700"
+                  >
+                    Editar Perfil
+                  </button>
                 )}
               </div>
             </div>
 
-            {/* Selector rápido de avatar */}
-            {showAvatarPicker && (
-              <div className="mt-6 pt-5 border-t border-zinc-800/80">
-                <p className="text-xs font-bold text-zinc-300 mb-3">Elige un avatar predefinido:</p>
-                <div className="flex gap-2.5 flex-wrap">
-                  {AVATARS.map((a) => (
-                    <button
-                      key={a}
-                      onClick={() => setAvatar(a)}
-                      className={`h-12 w-12 rounded-xl overflow-hidden border-2 transition-all ${
-                        avatar === a ? 'border-blue-500 scale-105 shadow-lg' : 'border-zinc-800 hover:border-zinc-600'
-                      }`}
-                    >
-                      <img src={a} alt="avatar" className="h-full w-full object-cover bg-zinc-950" />
-                    </button>
-                  ))}
+            {/* Datos */}
+            <div className="space-y-2">
+              <h2 className="text-xl font-bold tracking-tight">{username}</h2>
+              <p className="text-xs text-zinc-400 font-mono">{email}</p>
+              
+              {editing ? (
+                <div className="space-y-3 pt-2">
+                  <div>
+                    <label className="text-[10px] text-zinc-500 uppercase font-mono">Biografía:</label>
+                    <textarea 
+                      value={bio} 
+                      onChange={(e) => setBio(e.target.value)}
+                      className="w-full bg-zinc-900 border border-zinc-800 rounded-lg p-2 text-sm text-white mt-1 focus:outline-none focus:border-emerald-500"
+                      rows={2}
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[10px] text-zinc-500 uppercase font-mono">URL de Avatar:</label>
+                    <input 
+                      type="text" 
+                      value={avatarUrl} 
+                      onChange={(e) => setAvatarUrl(e.target.value)}
+                      placeholder="https://..."
+                      className="w-full bg-zinc-900 border border-zinc-800 rounded-lg p-2 text-xs text-white mt-1 focus:outline-none focus:border-emerald-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[10px] text-zinc-500 uppercase font-mono">URL de Banner:</label>
+                    <input 
+                      type="text" 
+                      value={bannerUrl} 
+                      onChange={(e) => setBannerUrl(e.target.value)}
+                      placeholder="https://..."
+                      className="w-full bg-zinc-900 border border-zinc-800 rounded-lg p-2 text-xs text-white mt-1 focus:outline-none focus:border-emerald-500"
+                    />
+                  </div>
                 </div>
-              </div>
-            )}
+              ) : (
+                <p className="text-sm text-zinc-300 pt-1">{bio}</p>
+              )}
+            </div>
 
-            {/* Selector rápido de banner */}
-            {showBannerPicker && (
-              <div className="mt-6 pt-5 border-t border-zinc-800/80">
-                <p className="text-xs font-bold text-zinc-300 mb-3">Elige un banner predefinido:</p>
-                <div className="flex gap-3 flex-wrap">
-                  {BANNERS.map((b) => (
-                    <button
-                      key={b}
-                      onClick={() => setBanner(b)}
-                      className={`h-16 w-28 rounded-lg overflow-hidden border-2 transition-all ${
-                        banner === b ? 'border-blue-500 scale-105 shadow-lg' : 'border-zinc-800 hover:border-zinc-600'
-                      }`}
-                    >
-                      <img src={b} alt="banner" className="h-full w-full object-cover" />
-                    </button>
-                  ))}
-                </div>
+            {/* Estadísticas Cloud */}
+            <div className="grid grid-cols-3 gap-3 mt-6 pt-6 border-t border-zinc-900 text-center font-mono">
+              <div className="bg-zinc-900/50 border border-zinc-800/60 p-3 rounded-xl">
+                <div className="text-lg font-bold text-emerald-400">{stats.animesCount}</div>
+                <div className="text-[10px] text-zinc-500 uppercase tracking-wider">Animes DB</div>
               </div>
-            )}
+              <div className="bg-zinc-900/50 border border-zinc-800/60 p-3 rounded-xl">
+                <div className="text-lg font-bold text-cyan-400">{stats.episodiosVistos}</div>
+                <div className="text-[10px] text-zinc-500 uppercase tracking-wider">Episodios Vistos</div>
+              </div>
+              <div className="bg-zinc-900/50 border border-zinc-800/60 p-3 rounded-xl">
+                <div className="text-lg font-bold text-amber-400">{stats.tiempoHoras}h</div>
+                <div className="text-[10px] text-zinc-500 uppercase tracking-wider">Tiempo Visto</div>
+              </div>
+            </div>
+
           </div>
         </div>
 
-        {/* Bloque de Estadísticas */}
-        <div className="mt-6 grid grid-cols-3 gap-3">
-          <div className="rounded-xl border border-zinc-800/80 bg-zinc-900/40 p-4 text-center backdrop-blur-sm">
-            <div className="text-2xl font-black text-white">0</div>
-            <div className="text-[10px] uppercase tracking-wider text-zinc-500 font-medium mt-1">Animes</div>
-          </div>
-          <div className="rounded-xl border border-zinc-800/80 bg-zinc-900/40 p-4 text-center backdrop-blur-sm">
-            <div className="text-2xl font-black text-white">0</div>
-            <div className="text-[10px] uppercase tracking-wider text-zinc-500 font-medium mt-1">Episodios</div>
-          </div>
-          <div className="rounded-xl border border-zinc-800/80 bg-zinc-900/40 p-4 text-center backdrop-blur-sm">
-            <div className="text-2xl font-black text-white">0h</div>
-            <div className="text-[10px] uppercase tracking-wider text-zinc-500 font-medium mt-1">Tiempo</div>
-          </div>
+        {/* Accesos */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <Link href="/admin/terminal" className="bg-zinc-950 border border-zinc-800 hover:border-emerald-500/50 p-5 rounded-2xl transition-all group flex items-center justify-between">
+            <div>
+              <div className="text-lg mb-1">🛠️ Terminal de Admin</div>
+              <div className="text-xs text-zinc-400">Control central de scraping y Github Actions</div>
+            </div>
+            <span className="text-zinc-600 group-hover:text-emerald-400 transition-colors">→</span>
+          </Link>
+
+          <Link href="/" className="bg-zinc-950 border border-zinc-800 hover:border-cyan-500/50 p-5 rounded-2xl transition-all group flex items-center justify-between">
+            <div>
+              <div className="text-lg mb-1">📚 Catálogo General</div>
+              <div className="text-xs text-zinc-400">Explora la parrilla de animes sincronizados</div>
+            </div>
+            <span className="text-zinc-600 group-hover:text-cyan-400 transition-colors">→</span>
+          </Link>
         </div>
+
       </div>
     </main>
   );

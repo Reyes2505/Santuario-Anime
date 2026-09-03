@@ -26,8 +26,16 @@ import requests
 from datetime import datetime
 from supabase import create_client
 
-SUPABASE_URL = os.environ.get("SUPABASE_URL", "https://uftfbidzobftjbonziql.supabase.co")
-SUPABASE_KEY = os.environ.get("SUPABASE_SERVICE_ROLE_KEY", "sb_secret__1YKirUaCQsAR82TemDXHg_g5WYNZBq")
+# Credenciales SOLO desde variables de entorno
+SUPABASE_URL = os.environ.get("SUPABASE_URL", "")
+SUPABASE_KEY = os.environ.get("SUPABASE_SERVICE_ROLE_KEY", "")
+
+if not SUPABASE_URL or not SUPABASE_KEY:
+    print("Error: Faltan las variables de entorno SUPABASE_URL y SUPABASE_SERVICE_ROLE_KEY")
+    print("Configúralas con:")
+    print("  export SUPABASE_URL='https://uftfbidzobftjbonziql.supabase.co'")
+    print("  export SUPABASE_SERVICE_ROLE_KEY='tu_key_aqui'")
+    sys.exit(1)
 
 supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 
@@ -218,13 +226,10 @@ def actualizar_anime(anime_id, media, titulo_original):
 
 def modo_completo():
     """Actualiza todos los pendientes con info completa de AniList"""
-    # Cargar progreso previo
     progreso = cargar_progreso()
     
-    # Solo obtener animes pendientes que NO están en el progreso
     animes = supabase.table('animes').select('id, titulo').is_('fecha_estreno', 'null').execute()
     
-    # Filtrar los que ya se procesaron
     pendientes = [a for a in animes.data if a['id'] not in progreso]
     
     total = len(pendientes)

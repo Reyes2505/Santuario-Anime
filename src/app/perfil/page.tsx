@@ -22,7 +22,7 @@ export default function PerfilPage() {
   const [userId, setUserId] = useState<string | null>(null);
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
-  const [showEmail, setShowEmail] = useState(false); // Privacidad del correo
+  const [showEmail, setShowEmail] = useState(false);
   const [bio, setBio] = useState('Sin bio aún.');
   const [avatarUrl, setAvatarUrl] = useState('');
   const [bannerUrl, setBannerUrl] = useState('');
@@ -37,14 +37,23 @@ export default function PerfilPage() {
     tiempoVisualizacion: '0m'
   });
 
-  // Función para cargar stats locales (tiempo y episodios vistos)
+  // ========== FUNCIÓN CORREGIDA PARA CARGAR STATS ==========
   const cargarStatsLocal = useCallback(() => {
-    const trackingStats = getTrackingStats();
-    setStats(prev => ({
-      ...prev,
-      episodiosVistos: trackingStats.totalEpisodiosVistos,
-      tiempoVisualizacion: formatWatchTime(trackingStats.totalSeconds)
-    }));
+    const totalSeconds = getWatchTime();
+    const watchedEpisodes = getWatchedEpisodes();
+    const formattedTime = formatWatchTime(totalSeconds);
+    
+    console.log('📊 Cargando stats:', {
+      totalSeconds,
+      episodiosVistos: watchedEpisodes.length,
+      formattedTime
+    });
+    
+    setStats({
+      animesCount: 0, // Se actualizará después con Supabase
+      episodiosVistos: watchedEpisodes.length,
+      tiempoVisualizacion: formattedTime,
+    });
   }, []);
 
   useEffect(() => {
@@ -52,14 +61,10 @@ export default function PerfilPage() {
     sincronizarPerfilCloud();
     cargarStatsLocal();
     
-    // Escuchar cambios en localStorage (cuando se actualiza en otra pestaña)
-    window.addEventListener('storage', cargarStatsLocal);
-    
-    // Actualizar stats cada 30 segundos
-    const interval = setInterval(cargarStatsLocal, 30000);
+    // Actualizar cada 5 segundos (más rápido que 30s)
+    const interval = setInterval(cargarStatsLocal, 5000);
     
     return () => {
-      window.removeEventListener('storage', cargarStatsLocal);
       clearInterval(interval);
     };
   }, [cargarStatsLocal]);
@@ -84,7 +89,6 @@ export default function PerfilPage() {
       const defaultName = userEmail.split('@')[0];
       setUsername(defaultName);
 
-      // Bypass maestro indiscutible para tu cuenta de administrador
       const esAdminMaster = userEmail.toLowerCase().trim() === 'aaronreyesabantoj3@gmail.com';
 
       let { data: perfilData } = await supabase
@@ -146,7 +150,7 @@ export default function PerfilPage() {
       const payload = {
         user_id: userId,
         username: username,
-        email: email, // <--- Incluido obligatoriamente para evitar el error de Supabase
+        email: email,
         bio: bio,
         avatar_url: avatarUrl,
         banner_url: bannerUrl,
@@ -284,7 +288,6 @@ export default function PerfilPage() {
                 )}
               </div>
 
-              {/* Control de Privacidad del Correo */}
               <div className="flex items-center gap-2 text-xs text-zinc-400 font-mono">
                 {showEmail ? (
                   <span>{email}</span>
@@ -350,7 +353,7 @@ export default function PerfilPage() {
               )}
             </div>
 
-            {/* Métricas con nombres atractivos e intuitivos */}
+            {/* Métricas */}
             <div className="grid grid-cols-3 gap-3.5 mt-8 pt-6 border-t border-zinc-900 text-center font-mono">
               <div className="bg-black/40 border border-zinc-800/60 p-4 rounded-2xl">
                 <div className="text-xl font-bold text-emerald-400 tracking-tight">{stats.animesCount}</div>
@@ -369,7 +372,7 @@ export default function PerfilPage() {
           </div>
         </div>
 
-        {/* Panel de Control y Autoridad (Solo Admins) */}
+        {/* Panel de Control (solo admins) */}
         {isAdmin && (
           <div className="space-y-4 pt-4">
             <div className="flex items-center justify-between px-1">

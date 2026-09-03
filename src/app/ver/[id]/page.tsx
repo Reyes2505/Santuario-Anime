@@ -1,11 +1,12 @@
 "use client";
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
 import { Episodio, Anime } from '@/types/database';
 import VideoPlayer from '@/components/VideoPlayer';
 import { registrarVisualizacion } from '@/lib/ai-recommendations';
+import { addWatchTime, markEpisodeAsWatched } from '@/lib/tracking';
 
 interface PageProps {
   params: Promise<{ id: string }> | { id: string };
@@ -17,6 +18,67 @@ export default function Page({ params }: PageProps) {
   const [anime, setAnime] = useState<Anime | null>(null);
   const [mismaTemporada, setMismaTemporada] = useState<Episodio[]>([]);
   const [loading, setLoading] = useState(true);
+  const heartbeatRef = useRef<NodeJS.Timeout | null>(null);
+
+  // ========== TRACKING DIRECTO ==========
+  // Marcar episodio como visto al cargar la página
+  useEffect(() => {
+    if (id) {
+      markEpisodeAsWatched(id);
+      console.log('🎬 Episodio marcado como visto:', id);
+    }
+  }, [id]);
+
+  // Iniciar heartbeat inmediatamente al cargar la página
+  useEffect(() => {
+    // Iniciar inmediatamente
+    const startHeartbeat = () => {
+      if (heartbeatRef.current) return;
+      
+      heartbeatRef.current = setInterval(() => {
+        if (document.visibilityState === 'visible') {
+          addWatchTime(10);
+          console.log('⏱️ +10s de visualización');
+        }
+      }, 10000);
+    };
+
+    startHeartbeat();
+
+    // Cleanup
+    return () => {
+      if (heartbeatRef.current) {
+        clearInterval(heartbeatRef.current);
+        heartbeatRef.current = null;
+      }
+    };
+  }, []);
+
+  // Manejar visibilidad de la página
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        // Reactivar heartbeat si estaba detenido
+        if (!heartbeatRef.current) {
+          heartbeatRef.current = setInterval(() => {
+            addWatchTime(10);
+            console.log('⏱️ +10s de visualización (visible)');
+          }, 10000);
+        }
+      } else {
+        // Detener heartbeat cuando la pestaña no es visible
+        if (heartbeatRef.current) {
+          clearInterval(heartbeatRef.current);
+          heartbeatRef.current = null;
+        }
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, []);
 
   useEffect(() => {
     let mounted = true;
@@ -51,7 +113,6 @@ export default function Page({ params }: PageProps) {
 
             if (animeData && mounted) {
               setAnime(animeData);
-              // Registrar visualización para el algoritmo de IA
               registrarVisualizacion(animeData, epData as Episodio, 0);
             }
           }

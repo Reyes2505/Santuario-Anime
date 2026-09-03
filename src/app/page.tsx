@@ -86,7 +86,7 @@ export default function Home() {
               setPagina(1);
             }}
             placeholder="Buscar anime..."
-            className="w-full rounded-full border border-zinc-800 bg-zinc-900/80 px-5 py-2.5 text-sm text-white placeholder-zinc-500 focus:border-zinc-600 focus:outline-none"
+            className="w-full rounded-full border border-zinc-800 bg-white dark:bg-zinc-900/80 px-5 py-2.5 text-sm text-white placeholder-zinc-400 dark:placeholder-zinc-500 focus:border-zinc-500 dark:focus:border-zinc-600 focus:outline-none"
           />
         </div>
 
@@ -95,7 +95,9 @@ export default function Home() {
           <button
             onClick={() => { setOrden('fecha_estreno'); setPagina(1); }}
             className={`px-4 py-1.5 rounded-full text-xs transition-all ${
-              orden === 'fecha_estreno' ? 'bg-white text-black' : 'bg-zinc-900 text-zinc-400 hover:bg-zinc-800'
+              orden === 'fecha_estreno'
+                ? 'bg-zinc-900 dark:bg-white text-white dark:text-black'
+                : 'bg-zinc-900 text-zinc-400 hover:bg-zinc-300 dark:hover:bg-zinc-800'
             }`}
           >
             Fecha de estreno
@@ -103,7 +105,9 @@ export default function Home() {
           <button
             onClick={() => { setOrden('alfabetico'); setPagina(1); }}
             className={`px-4 py-1.5 rounded-full text-xs transition-all ${
-              orden === 'alfabetico' ? 'bg-white text-black' : 'bg-zinc-900 text-zinc-400 hover:bg-zinc-800'
+              orden === 'alfabetico'
+                ? 'bg-zinc-900 dark:bg-white text-white dark:text-black'
+                : 'bg-zinc-900 text-zinc-400 hover:bg-zinc-300 dark:hover:bg-zinc-800'
             }`}
           >
             A-Z
@@ -111,7 +115,9 @@ export default function Home() {
           <button
             onClick={() => { setOrden('populares'); setPagina(1); }}
             className={`px-4 py-1.5 rounded-full text-xs transition-all ${
-              orden === 'populares' ? 'bg-white text-black' : 'bg-zinc-900 text-zinc-400 hover:bg-zinc-800'
+              orden === 'populares'
+                ? 'bg-zinc-900 dark:bg-white text-white dark:text-black'
+                : 'bg-zinc-900 text-zinc-400 hover:bg-zinc-300 dark:hover:bg-zinc-800'
             }`}
           >
             Populares
@@ -119,7 +125,9 @@ export default function Home() {
           <button
             onClick={() => { setOrden('estado'); setPagina(1); }}
             className={`px-4 py-1.5 rounded-full text-xs transition-all ${
-              orden === 'estado' ? 'bg-white text-black' : 'bg-zinc-900 text-zinc-400 hover:bg-zinc-800'
+              orden === 'estado'
+                ? 'bg-zinc-900 dark:bg-white text-white dark:text-black'
+                : 'bg-zinc-900 text-zinc-400 hover:bg-zinc-300 dark:hover:bg-zinc-800'
             }`}
           >
             Estado
@@ -138,14 +146,14 @@ export default function Home() {
             <Link
               key={link.href}
               href={link.href}
-              className="text-xs text-zinc-400 hover:text-white px-3 py-1.5 rounded-lg border border-zinc-800 hover:border-zinc-600 transition-all"
+              className="text-xs text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white px-3 py-1.5 rounded-lg border border-zinc-800 hover:border-zinc-500 dark:hover:border-zinc-600 transition-all"
             >
               {link.label}
             </Link>
           ))}
         </div>
 
-        <p className="text-xs text-zinc-500 mb-4 text-center">
+        <p className="text-xs text-zinc-500 dark:text-zinc-400 mb-4 text-center">
           {animesOrdenados.length} animes
           {busqueda && ` - "${busqueda}"`}
           {pagina > 1 && ` · Página ${pagina} de ${totalPaginas}`}
@@ -161,7 +169,7 @@ export default function Home() {
           <AnimeGrid animes={animesPaginados} />
         ) : (
           <div className="text-center py-16">
-            <p className="text-sm text-zinc-500">
+            <p className="text-sm text-zinc-500 dark:text-zinc-400">
               {busqueda ? `No se encontró "${busqueda}"` : 'No hay animes'}
             </p>
           </div>
@@ -172,7 +180,7 @@ export default function Home() {
             <button
               onClick={() => setPagina(Math.max(1, pagina - 1))}
               disabled={pagina === 1}
-              className="px-4 py-2 rounded-lg bg-zinc-900 text-xs text-zinc-400 hover:bg-zinc-800 disabled:opacity-30"
+              className="px-4 py-2 rounded-lg bg-zinc-900 text-xs text-zinc-400 hover:bg-zinc-300 dark:hover:bg-zinc-800 disabled:opacity-30"
             >
               Anterior
             </button>
@@ -180,11 +188,13 @@ export default function Home() {
               .filter(num => num === 1 || num === totalPaginas || Math.abs(num - pagina) <= 1)
               .map((num, idx, arr) => (
                 <div key={num} className="flex items-center gap-1.5">
-                  {idx > 0 && arr[idx - 1] !== num - 1 && <span className="text-zinc-600">...</span>}
+                  {idx > 0 && arr[idx - 1] !== num - 1 && <span className="text-zinc-400 dark:text-zinc-600">...</span>}
                   <button
                     onClick={() => setPagina(num)}
                     className={`h-8 w-8 rounded-lg text-xs font-bold ${
-                      pagina === num ? 'bg-white text-black' : 'bg-zinc-900 text-zinc-400 hover:bg-zinc-800'
+                      pagina === num
+                        ? 'bg-zinc-900 dark:bg-white text-white dark:text-black'
+                        : 'bg-zinc-900 text-zinc-400 hover:bg-zinc-300 dark:hover:bg-zinc-800'
                     }`}
                   >
                     {num}
@@ -194,7 +204,7 @@ export default function Home() {
             <button
               onClick={() => setPagina(Math.min(totalPaginas, pagina + 1))}
               disabled={pagina === totalPaginas}
-              className="px-4 py-2 rounded-lg bg-zinc-900 text-xs text-zinc-400 hover:bg-zinc-800 disabled:opacity-30"
+              className="px-4 py-2 rounded-lg bg-zinc-900 text-xs text-zinc-400 hover:bg-zinc-300 dark:hover:bg-zinc-800 disabled:opacity-30"
             >
               Siguiente
             </button>

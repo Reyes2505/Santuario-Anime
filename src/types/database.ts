@@ -1,5 +1,7 @@
 export type StreamType = 'local' | 'online';
 
+export type EstadoEmision = 'emitido' | 'en_espera' | 'suspendido' | 'terminado' | 'desconocido';
+
 export interface Temporada {
   id: string;
   nombre: string;
@@ -15,6 +17,10 @@ export interface Anime {
   banner_url?: string | null;
   trailer_url?: string | null;
   trailer_type?: StreamType;
+  generos?: string[];
+  fecha_estreno?: string | null;
+  fecha_finalizacion?: string | null;
+  estado_emision?: EstadoEmision;
   created_at?: string | null;
 }
 
@@ -53,7 +59,7 @@ export interface CustomList {
   id: string;
   name: string;
   description: string;
-  isSystem?: boolean; // ej: 'Favoritos', 'Por Ver'
+  isSystem?: boolean;
   createdAt: number;
   episodeIds: string[];
   animeIds: string[];

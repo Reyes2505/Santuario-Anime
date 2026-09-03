@@ -2,6 +2,7 @@
 """
 Bot Ectosimbionte Single - Ejecutado por GitHub Actions
 Recibe un nombre de anime, busca metadata real y la inserta en Supabase
+Extrae: título, sinopsis, portada, géneros, fechas, estado de emisión y episodios
 """
 
 import os
@@ -20,7 +21,6 @@ if not SUPABASE_URL or not SUPABASE_KEY:
 
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
-# Mapa de episodios conocidos para animes populares como fallback inteligente
 EPISODIOS_CONOCIDOS = {
     'darling in the franxx': 24,
     'mushoku tensei': 23,
@@ -39,31 +39,92 @@ EPISODIOS_CONOCIDOS = {
 }
 
 def generar_slug(texto):
-    """Genera un slug limpio compatible con las rutas de la web"""
     slug = texto.lower()
     slug = re.sub(r'[^a-z0-9\s-]', '', slug)
     slug = re.sub(r'\s+', '-', slug).strip('-')
     return slug
+
+def extraer_estado_emision(soup):
+    """Determina el estado de emisión del anime"""
+    estado = 'desconocido'
+    
+    # Buscar en el div de estado
+    estado_div = soup.find('div', class_='enemision')
+    if estado_div:
+        texto = estado_div.text.strip().lower()
+        if 'emision' in texto or 'currently' in texto:
+            estado = 'emitido'
+        elif 'proximamente' in texto or 'estreno' in texto or 'upcoming' in texto:
+            estado = 'en_espera'
+        elif 'pausa' in texto or 'suspend' in texto or 'paused' in texto:
+            estado = 'suspendido'
+        elif 'finalizado' in texto or 'concluido' in texto or 'finished' in texto:
+            estado = 'terminado'
+    
+    return estado
+
+def extraer_fechas(soup):
+    """Extrae fechas de estreno y finalización estimadas"""
+    fecha_estreno = None
+    fecha_finalizacion = None
+    
+    # Buscar enlaces de temporada
+    fecha_links = soup.find_all('a', href=re.compile(r'/temporada/'))
+    for link in fecha_links:
+        texto = link.text.strip().lower()
+        anio_match = re.search(r'(\d{4})', texto)
+        if not anio_match:
+            continue
+        anio = int(anio_match.group(1))
+        
+        if 'invierno' in texto:
+            fecha_estreno = f"{anio}-01-01"
+        elif 'primavera' in texto:
+            fecha_estreno = f"{anio}-04-01"
+        elif 'verano' in texto:
+            fecha_estreno = f"{anio}-07-01"
+        elif 'otono' in texto:
+            fecha_estreno = f"{anio}-10-01"
+    
+    # Buscar fecha de emisión directa
+    fecha_info = soup.find('li', string=re.compile(r'Emitido|Fecha'))
+    if fecha_info and not fecha_estreno:
+        fecha_match = re.search(r'(\d{4})-(\d{2})-(\d{2})', fecha_info.text)
+        if fecha_match:
+            fecha_estreno = f"{fecha_match.group(1)}-{fecha_match.group(2)}-{fecha_match.group(3)}"
+    
+    return fecha_estreno, fecha_finalizacion
+
+def extraer_generos(soup):
+    """Extrae géneros del anime"""
+    generos = []
+    genero_links = soup.find_all('a', href=re.compile(r'/genero/'))
+    for g in genero_links:
+        genero = g.text.strip()
+        if genero and genero not in generos:
+            generos.append(genero)
+    return generos
 
 def buscar_e_insertar_anime(nombre_anime):
     print(f"Buscando metadatos para: '{nombre_anime}'...")
     
     slug = generar_slug(nombre_anime)
     
-    # Verificar si ya existe en la base de datos para evitar duplicados
     existing = supabase.table("animes").select("id, titulo").ilike("titulo", f"%{nombre_anime}%").execute()
     if existing.data:
         print(f"El anime ya existe en Supabase.")
         return
     
-    # Variables por defecto
     titulo_real = nombre_anime
-    sinopsis = f"Sinopsis oficial extraída automáticamente para {nombre_anime} por el Agente Ectosimbionte."
+    sinopsis = f"Sinopsis oficial extraída automáticamente para {nombre_anime}."
     portada = f"https://cdn.jkanime.net/assets/images/animes/image/{slug}.jpg"
     banner = "https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?w=1200"
     episodios = []
+    generos = []
+    fecha_estreno = None
+    fecha_finalizacion = None
+    estado_emision = 'desconocido'
     
-    # Obtener página real de la fuente
     try:
         response = requests.get(
             f"https://jkanime.net/{slug}/",
@@ -74,31 +135,35 @@ def buscar_e_insertar_anime(nombre_anime):
         if response.status_code == 200:
             soup = BeautifulSoup(response.content, 'html.parser')
             
-            # Extraer título real de la cabecera
             h3 = soup.find('h3')
             if h3 and h3.text.strip() != 'Buscado recientemente:':
                 titulo_real = h3.text.strip()
             
-            # Extraer sinopsis oficial
             p = soup.find('p', class_='scroll')
             if p:
                 sinopsis = p.text.strip()
             
-            # Extraer portada oficial
             img_div = soup.find('div', class_='anime_pic')
             if img_div:
                 img = img_div.find('img')
                 if img:
                     portada = img.get('src', portada)
             
-            # Extraer tokens CSRF e ID interno para la paginación de episodios
+            # Extraer géneros
+            generos = extraer_generos(soup)
+            
+            # Extraer estado de emisión
+            estado_emision = extraer_estado_emision(soup)
+            
+            # Extraer fechas
+            fecha_estreno, fecha_finalizacion = extraer_fechas(soup)
+            
             csrf_match = re.search(r'name="csrf-token" content="([^"]+)"', response.text)
             csrf = csrf_match.group(1) if csrf_match else ''
             
             id_match = re.search(r'ajax/episodes/(\d+)/', response.text)
             jk_id = int(id_match.group(1)) if id_match else 0
             
-            # Obtener listado real de episodios mediante la API interna
             if jk_id and csrf:
                 pagina = 1
                 while pagina <= 15:
@@ -125,45 +190,46 @@ def buscar_e_insertar_anime(nombre_anime):
                     except:
                         break
     except Exception as e:
-        print(f"Aviso en scraping web (usando respaldos): {e}")
+        print(f"Aviso en scraping web: {e}")
     
-    # Ordenar los episodios extraídos de forma numérica ascendente
     episodios = sorted(list(set(episodios)))
-
-    # Fallback inteligente si la web externa no devolvió episodios o bloqueó la petición
+    
     if not episodios:
         nombre_lower = nombre_anime.lower()
         total_episodios = 12
-        
         for clave, cantidad in EPISODIOS_CONOCIDOS.items():
             if clave in nombre_lower:
                 total_episodios = cantidad
                 break
-        
         episodios = list(range(1, total_episodios + 1))
     
     total_episodios = len(episodios)
     
-    print(f"Titulo detectado: {titulo_real}")
-    print(f"Total de episodios a mapear: {total_episodios}")
+    print(f"Titulo: {titulo_real}")
+    print(f"Generos: {', '.join(generos) if generos else 'No detectados'}")
+    print(f"Estado: {estado_emision}")
+    print(f"Fecha estreno: {fecha_estreno or 'Desconocida'}")
+    print(f"Episodios: {total_episodios}")
     
-    # 1. Insertar el anime principal en Supabase
     anime_payload = {
         "titulo": titulo_real,
         "sinopsis": sinopsis,
         "portada_url": portada,
-        "banner_url": banner
+        "banner_url": banner,
+        "generos": generos,
+        "fecha_estreno": fecha_estreno,
+        "fecha_finalizacion": fecha_finalizacion,
+        "estado_emision": estado_emision
     }
     
     res_anime = supabase.table("animes").insert(anime_payload).execute()
     if not res_anime.data:
-        print("Error crítico: No se pudo insertar el anime en la base de datos.")
+        print("Error crítico: No se pudo insertar el anime.")
         sys.exit(1)
     
     anime_id = res_anime.data[0]["id"]
     print(f"Anime registrado con ID: {anime_id}")
     
-    # 2. Crear la Temporada 1 asociada
     temp_payload = {
         "anime_id": anime_id,
         "nombre": "Temporada 1",
@@ -173,26 +239,25 @@ def buscar_e_insertar_anime(nombre_anime):
     res_temp = supabase.table("temporadas").insert(temp_payload).execute()
     temp_id = res_temp.data[0]["id"]
     
-    # 3. Construir e insertar el lote completo de episodios con enlaces estables de embed
     episodios_payload = []
     for ep_num in episodios:
         episodios_payload.append({
             "temporada_id": temp_id,
             "numero": ep_num,
             "titulo": f"Episodio {ep_num}",
-            "url_stream": f"https://jkanime.net/es/embed/{slug}/{ep_num}/",
+            "url_stream": f"https://jkanime.net/{slug}/{ep_num}/",
             "visto": False
         })
     
     if episodios_payload:
         supabase.table("episodios").insert(episodios_payload).execute()
-        print(f"¡Éxito! Se insertaron {total_episodios} episodios para {titulo_real}.")
+        print(f"Se insertaron {total_episodios} episodios para {titulo_real}.")
     else:
-        print("Error: No se pudieron generar registros de episodios.")
+        print("Error: No se pudieron generar episodios.")
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
-        print("Error: Debes proporcionar el nombre del anime como argumento.")
+        print("Error: Debes proporcionar el nombre del anime.")
         sys.exit(1)
     
     anime_a_buscar = sys.argv[1]

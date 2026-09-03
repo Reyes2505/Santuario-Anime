@@ -6,6 +6,7 @@ import { supabase } from '@/lib/supabase';
 import { Anime } from '@/types/database';
 import HeroCarousel from '@/components/HeroCarousel';
 import AnimeGrid from '@/components/AnimeGrid';
+import ContinueWatchingSection from '@/components/ContinueWatchingSection';
 
 const ITEMS_POR_PAGINA = 24;
 
@@ -22,7 +23,6 @@ export default function Home() {
     async function loadData() {
       setLoading(true);
       try {
-        // Solo cargar campos necesarios para optimizar
         const { data, error } = await supabase
           .from('animes')
           .select('id, titulo, portada_url, banner_url, sinopsis, generos, estado_emision, fecha_estreno')
@@ -42,7 +42,6 @@ export default function Home() {
     loadData();
   }, []);
 
-  // Extraer todos los géneros únicos
   const todosGeneros = useMemo(() => {
     const generos = new Set<string>();
     animes.forEach((anime) => {
@@ -53,7 +52,6 @@ export default function Home() {
     return Array.from(generos).sort();
   }, [animes]);
 
-  // Extraer estados únicos
   const todosEstados = useMemo(() => {
     const estados = new Set<string>();
     animes.forEach((anime) => {
@@ -66,17 +64,14 @@ export default function Home() {
     return animes.filter((anime) => {
       const query = busqueda.toLowerCase().trim();
       
-      // Filtro por búsqueda
       if (query && !anime.titulo.toLowerCase().includes(query) && !(anime.sinopsis || '').toLowerCase().includes(query)) {
         return false;
       }
       
-      // Filtro por género
       if (generoSeleccionado && (!anime.generos || !anime.generos.includes(generoSeleccionado))) {
         return false;
       }
       
-      // Filtro por estado
       if (estadoSeleccionado && anime.estado_emision !== estadoSeleccionado) {
         return false;
       }
@@ -114,7 +109,6 @@ export default function Home() {
     pagina * ITEMS_POR_PAGINA
   );
 
-  // Reset página cuando cambian filtros
   useEffect(() => {
     setPagina(1);
   }, [busqueda, generoSeleccionado, estadoSeleccionado, orden]);
@@ -124,6 +118,9 @@ export default function Home() {
       <HeroCarousel animes={animes.slice(0, 5)} />
 
       <section className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+        {/* ========== CONTINUAR VIENDO ========== */}
+        <ContinueWatchingSection />
+
         {/* Búsqueda y filtros */}
         <div className="space-y-4 mb-8">
           <div className="max-w-xl mx-auto">
@@ -137,7 +134,6 @@ export default function Home() {
           </div>
 
           <div className="flex flex-wrap gap-2 justify-center">
-            {/* Filtro de género */}
             <select
               value={generoSeleccionado}
               onChange={(e) => setGeneroSeleccionado(e.target.value)}
@@ -149,7 +145,6 @@ export default function Home() {
               ))}
             </select>
 
-            {/* Filtro de estado */}
             <select
               value={estadoSeleccionado}
               onChange={(e) => setEstadoSeleccionado(e.target.value)}
@@ -162,7 +157,6 @@ export default function Home() {
             </select>
           </div>
 
-          {/* Filtros de orden */}
           <div className="flex gap-2 justify-center flex-wrap">
             <button
               onClick={() => setOrden('fecha_estreno')}

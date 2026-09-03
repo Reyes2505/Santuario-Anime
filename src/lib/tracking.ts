@@ -4,6 +4,7 @@ import { Anime, Episodio } from '@/types/database';
 const STORAGE_KEY = 'santuario_tracking_v1';
 const WATCH_TIME_KEY = 'santuario_anime_watch_time';
 const WATCHED_EPISODES_KEY = 'santuario_anime_watched_episodes';
+const HISTORY_KEY = 'santuario_anime_history';
 
 export interface TrackingData {
   animeId: string;
@@ -11,6 +12,19 @@ export interface TrackingData {
   ultimoEpisodio: number;
   progreso: number; // 0-100
   actualizadoEn: number;
+}
+
+export interface HistoryEntry {
+  episodeId: string;
+  animeId: string;
+  animeTitulo: string;
+  animePortada: string;
+  episodeNumber: number;
+  episodeTitle: string;
+  temporadaId: string;
+  watchedAt: number;
+  progress: number;
+  completed: boolean;
 }
 
 // ========== FUNCIONES DE TRACKING DE ANIMES ==========
@@ -157,6 +171,85 @@ export function formatWatchTime(totalSeconds: number): string {
   return `${hours}h ${minutes}m`;
 }
 
+// ========== HISTORIAL DE VISUALIZACIÓN ==========
+
+export function addToHistory(entry: Omit<HistoryEntry, 'watchedAt'>): void {
+  if (typeof window === 'undefined') return;
+  
+  const history = getHistory();
+  const existingIndex = history.findIndex(h => h.episodeId === entry.episodeId);
+  
+  if (existingIndex >= 0) {
+    history[existingIndex] = {
+      ...history[existingIndex],
+      ...entry,
+      watchedAt: Date.now(),
+    };
+  } else {
+    history.unshift({
+      ...entry,
+      watchedAt: Date.now(),
+    });
+  }
+  
+  const limitedHistory = history.slice(0, 100);
+  localStorage.setItem(HISTORY_KEY, JSON.stringify(limitedHistory));
+}
+
+export function getHistory(): HistoryEntry[] {
+  if (typeof window === 'undefined') return [];
+  
+  try {
+    const raw = localStorage.getItem(HISTORY_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
+
+export function getContinueWatching(): HistoryEntry[] {
+  const history = getHistory();
+  const animeMap = new Map<string, HistoryEntry>();
+  
+  history.forEach(entry => {
+    if (!entry.completed) {
+      const existing = animeMap.get(entry.animeId);
+      if (!existing || entry.watchedAt > existing.watchedAt) {
+        animeMap.set(entry.animeId, entry);
+      }
+    }
+  });
+  
+  return Array.from(animeMap.values()).sort((a, b) => b.watchedAt - a.watchedAt);
+}
+
+export function getWatchedHistory(): HistoryEntry[] {
+  return getHistory()
+    .filter(h => h.completed)
+    .sort((a, b) => b.watchedAt - a.watchedAt);
+}
+
+export function getCompletedAnimes(): HistoryEntry[] {
+  const history = getHistory();
+  const animeMap = new Map<string, HistoryEntry>();
+  
+  history.forEach(entry => {
+    if (entry.completed) {
+      const existing = animeMap.get(entry.animeId);
+      if (!existing || entry.watchedAt > existing.watchedAt) {
+        animeMap.set(entry.animeId, entry);
+      }
+    }
+  });
+  
+  return Array.from(animeMap.values()).sort((a, b) => b.watchedAt - a.watchedAt);
+}
+
+export function clearHistory(): void {
+  if (typeof window === 'undefined') return;
+  localStorage.removeItem(HISTORY_KEY);
+}
+
 // ========== FUNCIÓN PARA RESET (OPCIONAL) ==========
 
 export function resetTracking(): void {
@@ -164,4 +257,5 @@ export function resetTracking(): void {
   localStorage.removeItem(STORAGE_KEY);
   localStorage.removeItem(WATCH_TIME_KEY);
   localStorage.removeItem(WATCHED_EPISODES_KEY);
+  localStorage.removeItem(HISTORY_KEY);
 }

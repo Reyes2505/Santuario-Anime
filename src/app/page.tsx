@@ -13,7 +13,7 @@ export default function Home() {
   const [animes, setAnimes] = useState<Anime[]>([]);
   const [loading, setLoading] = useState(true);
   const [busqueda, setBusqueda] = useState('');
-  const [orden, setOrden] = useState('recientes');
+  const [orden, setOrden] = useState('fecha_estreno');
   const [pagina, setPagina] = useState(1);
 
   useEffect(() => {
@@ -26,8 +26,7 @@ export default function Home() {
         } else {
           setAnimes([]);
         }
-      } catch (err) {
-        console.error('Error:', err);
+      } catch {
         setAnimes([]);
       } finally {
         setLoading(false);
@@ -36,7 +35,6 @@ export default function Home() {
     loadData();
   }, []);
 
-  // Búsqueda FUNCIONAL
   const animesFiltrados = animes.filter((anime) => {
     const query = busqueda.toLowerCase().trim();
     if (!query) return true;
@@ -47,9 +45,24 @@ export default function Home() {
   });
 
   const animesOrdenados = [...animesFiltrados].sort((a, b) => {
-    if (orden === 'alfabetico') return a.titulo.localeCompare(b.titulo);
-    if (orden === 'populares') return (b.sinopsis?.length || 0) - (a.sinopsis?.length || 0);
-    return 0;
+    switch (orden) {
+      case 'alfabetico':
+        return a.titulo.localeCompare(b.titulo);
+      case 'populares':
+        return (b.sinopsis?.length || 0) - (a.sinopsis?.length || 0);
+      case 'fecha_estreno': {
+        const fechaA = a.fecha_estreno ? new Date(a.fecha_estreno).getTime() : 0;
+        const fechaB = b.fecha_estreno ? new Date(b.fecha_estreno).getTime() : 0;
+        return fechaB - fechaA;
+      }
+      case 'estado': {
+        const estadoA = a.estado_emision || 'desconocido';
+        const estadoB = b.estado_emision || 'desconocido';
+        return estadoA.localeCompare(estadoB);
+      }
+      default:
+        return 0;
+    }
   });
 
   const totalPaginas = Math.ceil(animesOrdenados.length / ITEMS_POR_PAGINA);
@@ -77,21 +90,40 @@ export default function Home() {
           />
         </div>
 
-        {/* Filtros */}
-        <div className="flex gap-2 mb-6 justify-center">
-          {['recientes', 'alfabetico', 'populares'].map((o) => (
-            <button
-              key={o}
-              onClick={() => { setOrden(o); setPagina(1); }}
-              className={`px-4 py-1.5 rounded-full text-xs transition-all ${
-                orden === o
-                  ? 'bg-white text-black'
-                  : 'bg-zinc-900 text-zinc-400 hover:bg-zinc-800'
-              }`}
-            >
-              {o === 'recientes' ? 'Recientes' : o === 'alfabetico' ? 'A-Z' : 'Populares'}
-            </button>
-          ))}
+        {/* Filtros de orden */}
+        <div className="flex gap-2 mb-6 justify-center flex-wrap">
+          <button
+            onClick={() => { setOrden('fecha_estreno'); setPagina(1); }}
+            className={`px-4 py-1.5 rounded-full text-xs transition-all ${
+              orden === 'fecha_estreno' ? 'bg-white text-black' : 'bg-zinc-900 text-zinc-400 hover:bg-zinc-800'
+            }`}
+          >
+            Fecha de estreno
+          </button>
+          <button
+            onClick={() => { setOrden('alfabetico'); setPagina(1); }}
+            className={`px-4 py-1.5 rounded-full text-xs transition-all ${
+              orden === 'alfabetico' ? 'bg-white text-black' : 'bg-zinc-900 text-zinc-400 hover:bg-zinc-800'
+            }`}
+          >
+            A-Z
+          </button>
+          <button
+            onClick={() => { setOrden('populares'); setPagina(1); }}
+            className={`px-4 py-1.5 rounded-full text-xs transition-all ${
+              orden === 'populares' ? 'bg-white text-black' : 'bg-zinc-900 text-zinc-400 hover:bg-zinc-800'
+            }`}
+          >
+            Populares
+          </button>
+          <button
+            onClick={() => { setOrden('estado'); setPagina(1); }}
+            className={`px-4 py-1.5 rounded-full text-xs transition-all ${
+              orden === 'estado' ? 'bg-white text-black' : 'bg-zinc-900 text-zinc-400 hover:bg-zinc-800'
+            }`}
+          >
+            Estado
+          </button>
         </div>
 
         {/* Navegación */}
@@ -116,6 +148,7 @@ export default function Home() {
         <p className="text-xs text-zinc-500 mb-4 text-center">
           {animesOrdenados.length} animes
           {busqueda && ` - "${busqueda}"`}
+          {pagina > 1 && ` · Página ${pagina} de ${totalPaginas}`}
         </p>
 
         {loading ? (

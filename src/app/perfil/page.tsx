@@ -1,8 +1,9 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
+import { getTrackingStats, formatWatchTime, getWatchTime, getWatchedEpisodes } from '@/lib/tracking';
 
 interface UsuarioDB {
   id: string;
@@ -33,13 +34,35 @@ export default function PerfilPage() {
   const [stats, setStats] = useState({
     animesCount: 0,
     episodiosVistos: 0,
-    tiempoHoras: 0
+    tiempoVisualizacion: '0m'
   });
+
+  // Función para cargar stats locales (tiempo y episodios vistos)
+  const cargarStatsLocal = useCallback(() => {
+    const trackingStats = getTrackingStats();
+    setStats(prev => ({
+      ...prev,
+      episodiosVistos: trackingStats.totalEpisodiosVistos,
+      tiempoVisualizacion: formatWatchTime(trackingStats.totalSeconds)
+    }));
+  }, []);
 
   useEffect(() => {
     setMounted(true);
     sincronizarPerfilCloud();
-  }, []);
+    cargarStatsLocal();
+    
+    // Escuchar cambios en localStorage (cuando se actualiza en otra pestaña)
+    window.addEventListener('storage', cargarStatsLocal);
+    
+    // Actualizar stats cada 30 segundos
+    const interval = setInterval(cargarStatsLocal, 30000);
+    
+    return () => {
+      window.removeEventListener('storage', cargarStatsLocal);
+      clearInterval(interval);
+    };
+  }, [cargarStatsLocal]);
 
   const sincronizarPerfilCloud = async () => {
     try {
@@ -100,14 +123,14 @@ export default function PerfilPage() {
 
       // Métricas de base de datos
       const { count: totalAnimes } = await supabase.from('animes').select('*', { count: 'exact', head: true });
-      const { count: totalEpisodiosVistos } = await supabase.from('episodios').select('*', { count: 'exact', head: true }).eq('visto', true);
 
-      const eps = totalEpisodiosVistos || 0;
-      setStats({
+      setStats(prev => ({
+        ...prev,
         animesCount: totalAnimes || 0,
-        episodiosVistos: eps,
-        tiempoHoras: Math.round((eps * 24) / 60)
-      });
+      }));
+
+      // Cargar stats locales después de las de BD
+      cargarStatsLocal();
 
     } catch (err) {
       console.error('Error sincronizando perfil:', err);
@@ -338,7 +361,7 @@ export default function PerfilPage() {
                 <div className="text-[10px] text-zinc-500 uppercase tracking-widest mt-1">Episodios Vistos</div>
               </div>
               <div className="bg-black/40 border border-zinc-800/60 p-4 rounded-2xl">
-                <div className="text-xl font-bold text-amber-400 tracking-tight">{stats.tiempoHoras}h</div>
+                <div className="text-xl font-bold text-amber-400 tracking-tight">{stats.tiempoVisualizacion}</div>
                 <div className="text-[10px] text-zinc-500 uppercase tracking-widest mt-1">Tiempo de Visualización</div>
               </div>
             </div>

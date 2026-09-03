@@ -2,12 +2,11 @@ name: Extraer Thumbnails
 
 on:
   schedule:
-    # Ejecutar cada 6 horas
     - cron: '0 */6 * * *'
-  workflow_dispatch: # Permite ejecución manual
+  workflow_dispatch:
   push:
     paths:
-      - 'extraer_thumbnails.py' # Re-ejecutar si el script cambia
+      - 'extraer_thumbnails.py'
 
 jobs:
   extraer-thumbnails:
@@ -35,6 +34,6 @@ jobs:
       - name: Ejecutar extractor
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           LIMITE_EPISODIOS: '5'
         run: python3 extraer_thumbnails.py

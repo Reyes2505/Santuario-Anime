@@ -2,8 +2,9 @@ name: Bot Ectosimbionte - Sincronización
 
 on:
   schedule:
-    - cron: '30 15 * * *'   # 10:30 AM Perú (UTC-5)
-    - cron: '0 19 * * *'    # 2:00 PM Perú (UTC-5)
+    # Ejecutar cada 30 minutos entre 10:00 AM y 3:00 PM Perú (UTC-5)
+    # UTC: 15:00-19:59
+    - cron: '0,30 15-19 * * *'
   workflow_dispatch:
 
 jobs:

@@ -14,10 +14,10 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'Santuario Anime | Mushoku Tensei Offline Stream',
+  title: 'Santuario Anime',
   description:
-    'Plataforma privada de streaming de anime optimizada para reproducción de episodios locales en alta calidad.',
-  keywords: ['Mushoku Tensei', 'Anime Stream', 'Santuario Anime', 'Offline Video Player'],
+    'Plataforma de streaming de anime',
+  keywords: ['Anime', 'Stream', 'Santuario Anime'],
 };
 
 export default function RootLayout({
@@ -26,8 +26,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="es" className={`${geistSans.variable} ${geistMono.variable} h-full antialiased dark`}>
-      <body className="min-h-screen flex flex-col bg-zinc-950 text-zinc-100 selection:bg-blue-600 selection:text-white">
+    <html lang="es" className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}>
+      <body className="min-h-screen flex flex-col bg-[var(--background)] text-[var(--foreground)] selection:bg-blue-600 selection:text-white">
         <Header />
         <div className="flex-grow flex flex-col">{children}</div>
       </body>

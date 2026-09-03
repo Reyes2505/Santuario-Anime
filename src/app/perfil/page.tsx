@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
-import { getTrackingStats, formatWatchTime, getWatchTime, getWatchedEpisodes } from '@/lib/tracking';
+import { getTrackingStats, formatWatchTime, getWatchTime, getWatchedEpisodes, getContinueWatching, HistoryEntry } from '@/lib/tracking';
 
 interface UsuarioDB {
   id: string;
@@ -30,6 +30,7 @@ export default function PerfilPage() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [usuariosLista, setUsuariosLista] = useState<UsuarioDB[]>([]);
   const [showAdminModal, setShowAdminModal] = useState(false);
+  const [continueWatching, setContinueWatching] = useState<HistoryEntry[]>([]);
 
   const [stats, setStats] = useState({
     animesCount: 0,
@@ -42,18 +43,14 @@ export default function PerfilPage() {
     const totalSeconds = getWatchTime();
     const watchedEpisodes = getWatchedEpisodes();
     const formattedTime = formatWatchTime(totalSeconds);
-    
-    console.log('📊 Cargando stats:', {
-      totalSeconds,
-      episodiosVistos: watchedEpisodes.length,
-      formattedTime
-    });
+    const continueItems = getContinueWatching();
     
     setStats({
-      animesCount: 0, // Se actualizará después con Supabase
+      animesCount: 0,
       episodiosVistos: watchedEpisodes.length,
       tiempoVisualizacion: formattedTime,
     });
+    setContinueWatching(continueItems);
   }, []);
 
   useEffect(() => {
@@ -61,7 +58,6 @@ export default function PerfilPage() {
     sincronizarPerfilCloud();
     cargarStatsLocal();
     
-    // Actualizar cada 5 segundos (más rápido que 30s)
     const interval = setInterval(cargarStatsLocal, 5000);
     
     return () => {
@@ -125,7 +121,6 @@ export default function PerfilPage() {
       
       setIsAdmin(esAdminMaster || Boolean(perfilData.is_admin));
 
-      // Métricas de base de datos
       const { count: totalAnimes } = await supabase.from('animes').select('*', { count: 'exact', head: true });
 
       setStats(prev => ({
@@ -133,7 +128,6 @@ export default function PerfilPage() {
         animesCount: totalAnimes || 0,
       }));
 
-      // Cargar stats locales después de las de BD
       cargarStatsLocal();
 
     } catch (err) {
@@ -371,6 +365,68 @@ export default function PerfilPage() {
 
           </div>
         </div>
+
+        {/* ========== CONTINUAR VIENDO ========== */}
+        {continueWatching.length > 0 && (
+          <div className="bg-[#09090b] border border-zinc-800/80 rounded-3xl p-6 sm:p-8">
+            <h2 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
+              <span className="text-blue-400">▶</span> Continuar viendo
+            </h2>
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+              {continueWatching.slice(0, 8).map((item) => (
+                <Link
+                  key={item.episodeId}
+                  href={`/ver/${item.episodeId}`}
+                  className="group relative rounded-xl overflow-hidden border border-zinc-800/60 bg-zinc-900/40 hover:border-blue-500/60 transition-all hover:-translate-y-1"
+                >
+                  <div className="relative aspect-[3/4] overflow-hidden">
+                    {item.animePortada ? (
+                      <img
+                        src={item.animePortada}
+                        alt={item.animeTitulo}
+                        className="h-full w-full object-cover group-hover:scale-110 transition-transform duration-500"
+                        loading="lazy"
+                      />
+                    ) : (
+                      <div className="h-full w-full bg-zinc-800 flex items-center justify-center">
+                        <span className="text-4xl">🎬</span>
+                      </div>
+                    )}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent" />
+                    
+                    <div className="absolute top-2 left-2 rounded-md bg-zinc-950/80 backdrop-blur-md px-2 py-0.5 text-[10px] font-bold text-white">
+                      EP {String(item.episodeNumber).padStart(2, '0')}
+                    </div>
+
+                    <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                      <div className="h-10 w-10 rounded-full bg-blue-600/90 flex items-center justify-center">
+                        <svg className="h-4 w-4 text-white ml-0.5" fill="currentColor" viewBox="0 0 24 24">
+                          <path d="M8 5v14l11-7z" />
+                        </svg>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="p-2.5">
+                    <h3 className="text-xs font-bold text-white truncate group-hover:text-blue-300 transition-colors">
+                      {item.animeTitulo}
+                    </h3>
+                    <p className="text-[10px] text-zinc-500 mt-0.5 truncate">
+                      {item.episodeTitle} · {item.progress}%
+                    </p>
+                  </div>
+
+                  <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-zinc-800">
+                    <div
+                      className="h-full bg-blue-500"
+                      style={{ width: `${item.progress}%` }}
+                    />
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Panel de Control (solo admins) */}
         {isAdmin && (

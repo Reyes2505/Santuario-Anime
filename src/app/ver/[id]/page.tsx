@@ -4,6 +4,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
 import { Episodio, Anime } from '@/types/database';
+import M3U8Player from '@/components/M3U8Player';
 import VideoPlayer from '@/components/VideoPlayer';
 import { registrarVisualizacion } from '@/lib/ai-recommendations';
 import { addWatchTime, markEpisodeAsWatched } from '@/lib/tracking';
@@ -18,67 +19,53 @@ export default function Page({ params }: PageProps) {
   const [anime, setAnime] = useState<Anime | null>(null);
   const [mismaTemporada, setMismaTemporada] = useState<Episodio[]>([]);
   const [loading, setLoading] = useState(true);
+  const [streamUrl, setStreamUrl] = useState('');
+  const [streamLoading, setStreamLoading] = useState(false);
   const heartbeatRef = useRef<NodeJS.Timeout | null>(null);
 
-  // ========== TRACKING DIRECTO ==========
-  // Marcar episodio como visto al cargar la página
+  // Tracking
   useEffect(() => {
     if (id) {
       markEpisodeAsWatched(id);
-      console.log('🎬 Episodio marcado como visto:', id);
     }
   }, [id]);
 
-  // Iniciar heartbeat inmediatamente al cargar la página
   useEffect(() => {
-    // Iniciar inmediatamente
-    const startHeartbeat = () => {
-      if (heartbeatRef.current) return;
-      
-      heartbeatRef.current = setInterval(() => {
-        if (document.visibilityState === 'visible') {
-          addWatchTime(10);
-          console.log('⏱️ +10s de visualización');
-        }
-      }, 10000);
-    };
-
-    startHeartbeat();
-
-    // Cleanup
-    return () => {
-      if (heartbeatRef.current) {
-        clearInterval(heartbeatRef.current);
-        heartbeatRef.current = null;
-      }
-    };
-  }, []);
-
-  // Manejar visibilidad de la página
-  useEffect(() => {
-    const handleVisibilityChange = () => {
+    heartbeatRef.current = setInterval(() => {
       if (document.visibilityState === 'visible') {
-        // Reactivar heartbeat si estaba detenido
-        if (!heartbeatRef.current) {
-          heartbeatRef.current = setInterval(() => {
-            addWatchTime(10);
-            console.log('⏱️ +10s de visualización (visible)');
-          }, 10000);
-        }
-      } else {
-        // Detener heartbeat cuando la pestaña no es visible
-        if (heartbeatRef.current) {
-          clearInterval(heartbeatRef.current);
-          heartbeatRef.current = null;
-        }
+        addWatchTime(10);
       }
-    };
+    }, 10000);
 
-    document.addEventListener('visibilitychange', handleVisibilityChange);
     return () => {
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      if (heartbeatRef.current) clearInterval(heartbeatRef.current);
     };
   }, []);
+
+  // Obtener stream M3U8
+  useEffect(() => {
+    async function getStream() {
+      if (!episodio?.url_stream) return;
+      
+      setStreamLoading(true);
+      try {
+        const res = await fetch(`/api/stream?url=${encodeURIComponent(episodio.url_stream)}`);
+        const data = await res.json();
+        
+        if (data.success && data.streamUrl) {
+          setStreamUrl(data.streamUrl);
+        }
+      } catch (err) {
+        console.error('Error obteniendo stream:', err);
+      } finally {
+        setStreamLoading(false);
+      }
+    }
+
+    if (episodio) {
+      getStream();
+    }
+  }, [episodio]);
 
   useEffect(() => {
     let mounted = true;
@@ -87,7 +74,6 @@ export default function Page({ params }: PageProps) {
       setLoading(true);
 
       try {
-        // Cargar episodio actual
         const { data: epData } = await supabase
           .from('episodios')
           .select('*')
@@ -97,7 +83,6 @@ export default function Page({ params }: PageProps) {
         if (epData && mounted) {
           setEpisodio(epData as Episodio);
 
-          // Cargar el anime al que pertenece
           const { data: tempData } = await supabase
             .from('temporadas')
             .select('anime_id')
@@ -117,7 +102,6 @@ export default function Page({ params }: PageProps) {
             }
           }
 
-          // Cargar episodios de la MISMA temporada
           const { data: sameSeason } = await supabase
             .from('episodios')
             .select('*')
@@ -184,19 +168,43 @@ export default function Page({ params }: PageProps) {
             </div>
           </div>
 
-          <VideoPlayer
-            episodio={episodio}
-            onNextEpisode={() => {
-              if (nextEp) window.location.href = `/ver/${nextEp.id}`;
-            }}
-            onPrevEpisode={() => {
-              if (prevEp) window.location.href = `/ver/${prevEp.id}`;
-            }}
-          />
+          {/* Reproductor */}
+          {streamLoading ? (
+            <div className="flex items-center justify-center py-20">
+              <div className="animate-spin h-10 w-10 border-2 border-t-blue-500 border-zinc-800 rounded-full" />
+            </div>
+          ) : streamUrl ? (
+            <M3U8Player
+              src={streamUrl}
+              episodeId={episodio.id}
+              episodeNumber={episodio.numero}
+              title={episodio.titulo}
+              animeId={anime?.id}
+              animeTitulo={anime?.titulo}
+              animePortada={anime?.portada_url}
+              temporadaId={episodio.temporada_id}
+              onNextEpisode={() => {
+                if (nextEp) window.location.href = `/ver/${nextEp.id}`;
+              }}
+              onPrevEpisode={() => {
+                if (prevEp) window.location.href = `/ver/${prevEp.id}`;
+              }}
+            />
+          ) : (
+            <VideoPlayer
+              episodio={episodio}
+              onNextEpisode={() => {
+                if (nextEp) window.location.href = `/ver/${nextEp.id}`;
+              }}
+              onPrevEpisode={() => {
+                if (prevEp) window.location.href = `/ver/${prevEp.id}`;
+              }}
+            />
+          )}
         </div>
       </section>
 
-      {/* Lista de episodios de la misma temporada */}
+      {/* Lista de episodios */}
       {mismaTemporada.length > 0 && (
         <section className="mx-auto max-w-7xl px-4 pt-8">
           <h2 className="text-lg font-bold text-white mb-4">
